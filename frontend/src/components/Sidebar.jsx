@@ -2,22 +2,30 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const links = [
-  { to: '/', label: 'Dashboard', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/employees', label: 'Employees', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/attendance', label: 'Attendance', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/leaves', label: 'Leave', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/advances/request', label: 'Request Advance', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/advances/my', label: 'My Advances', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/advances/admin', label: 'Advance Admin', roles: ['admin', 'hr', 'manager'] },
-  { to: '/payroll', label: 'Payroll', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/performance', label: 'Performance', roles: ['admin', 'hr', 'manager', 'employee'] },
-  { to: '/reports', label: 'Reports', roles: ['admin', 'hr', 'manager'] },
-  { to: '/settings', label: 'Settings', roles: ['admin', 'hr'] },
-  { to: '/audit-logs', label: 'Audit Logs', roles: ['admin', 'hr'] }
+  { to: '/', label: 'Dashboard', module: 'dashboard', action: 'view' },
+  { to: '/employees', label: 'Employees', module: 'employee', action: 'view' },
+  { to: '/attendance', label: 'Attendance', module: 'attendance', action: 'view' },
+  { to: '/leaves', label: 'Leave', module: 'leave', action: 'view' },
+  { to: '/advances/request', label: 'Request Advance', module: 'advance', action: 'create' },
+  { to: '/advances/my', label: 'My Advances', module: 'advance', action: 'view' },
+  { to: '/advances/admin', label: 'Advance Admin', module: 'advance', action: 'approve' },
+  { to: '/payroll', label: 'Payroll', module: 'payroll', action: 'view' },
+  { to: '/performance', label: 'Performance', module: 'performance', action: 'view' },
+  { to: '/reports', label: 'Reports', module: 'reports', action: 'view' },
+  { to: '/settings', label: 'Settings', module: 'settings', action: 'view' },
+  { to: '/permissions', label: 'Permissions', module: 'permissions', action: 'view' }
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { user } = useAuth();
+  const { user, canSeeModule, hasPermission } = useAuth();
+
+  const visibleLinks = links.filter((link) => {
+    if (link.to === '/advances/admin') {
+      return canSeeModule(link.module, link.action) && hasPermission(link.module, link.action);
+    }
+
+    return canSeeModule(link.module, link.action) || (link.to === '/' && hasPermission('dashboard', 'view'));
+  });
 
   return (
     <>
@@ -32,18 +40,16 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         <nav className="sidebar-nav">
-          {links
-            .filter((link) => link.roles.includes(user?.role))
-            .map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={onClose}
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-              >
-                {link.label}
-              </NavLink>
-            ))}
+          {visibleLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              onClick={onClose}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              {link.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="sidebar-footer">

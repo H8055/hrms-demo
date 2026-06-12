@@ -8,21 +8,21 @@ import {
   runPayroll,
   upsertSalaryStructure
 } from '../controllers/payroll.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, checkPermission } from '../middleware/auth.js';
 
 const router = Router();
 
 router.use(authenticate);
-router.get('/summary', getPayrollSummary);
-router.get('/', listPayrolls);
-router.get('/structures', authorize('admin', 'hr'), listSalaryStructures);
+router.get('/summary', checkPermission('payroll', 'view'), getPayrollSummary);
+router.get('/', checkPermission('payroll', 'view'), listPayrolls);
+router.get('/structures', checkPermission('payroll', 'view'), listSalaryStructures);
 router.post(
   '/structures',
-  authorize('admin', 'hr'),
+  checkPermission('payroll', 'edit'),
   [body('userId').notEmpty().withMessage('userId is required')],
   upsertSalaryStructure
 );
-router.post('/run', authorize('admin', 'hr'), [body('month').notEmpty().withMessage('month is required')], runPayroll);
-router.put('/:id/pay', authorize('admin', 'hr'), markPayrollPaid);
+router.post('/run', checkPermission('payroll', 'create'), [body('month').notEmpty().withMessage('month is required')], runPayroll);
+router.put('/:id/pay', checkPermission('payroll', 'approve'), markPayrollPaid);
 
 export default router;

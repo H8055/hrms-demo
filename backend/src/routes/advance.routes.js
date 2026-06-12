@@ -10,7 +10,7 @@ import {
   payAdvance,
   rejectAdvance
 } from '../controllers/advance.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, checkPermission } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -18,6 +18,7 @@ router.use(authenticate);
 
 router.post(
   '/',
+  checkPermission('advance', 'create'),
   [
     body('amount').isFloat({ gt: 0 }).withMessage('amount must be greater than 0'),
     body('reason').trim().notEmpty().withMessage('reason is required'),
@@ -27,11 +28,11 @@ router.post(
   createAdvance
 );
 
-router.get('/mine', getMyAdvances);
-router.get('/summary', getAdvanceSummary);
+router.get('/mine', checkPermission('advance', 'view'), getMyAdvances);
+router.get('/summary', checkPermission('advance', 'view'), getAdvanceSummary);
 router.get(
   '/',
-  authorize('admin', 'hr', 'manager'),
+  checkPermission('advance', 'view'),
   [
     query('status').optional().isIn(['pending', 'approved', 'rejected', 'paid']),
     query('page').optional().isInt({ min: 1 }),
@@ -40,12 +41,12 @@ router.get(
   ],
   listAdvances
 );
-router.get('/:id', getAdvanceById);
-router.put('/:id/approve', authorize('admin', 'hr', 'manager'), approveAdvance);
-router.put('/:id/reject', authorize('admin', 'hr', 'manager'), rejectAdvance);
+router.get('/:id', checkPermission('advance', 'view'), getAdvanceById);
+router.put('/:id/approve', checkPermission('advance', 'approve'), approveAdvance);
+router.put('/:id/reject', checkPermission('advance', 'approve'), rejectAdvance);
 router.put(
   '/:id/pay',
-  authorize('admin', 'hr', 'manager'),
+  checkPermission('advance', 'approve'),
   [
     body('paymentDate').notEmpty().withMessage('paymentDate is required'),
     body('paymentMode').isIn(['cash', 'bank', 'upi']).withMessage('paymentMode must be cash, bank or upi'),

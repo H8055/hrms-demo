@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const initialForm = {
   companyName: '',
@@ -13,6 +14,8 @@ const initialForm = {
 };
 
 export default function SettingsPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('settings', 'edit');
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -72,7 +75,8 @@ export default function SettingsPage() {
             <label className="field"><span>Address</span><textarea rows="3" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
             <label className="field"><span>Leave types (comma separated)</span><input value={form.leaveTypes} onChange={(e) => setForm({ ...form, leaveTypes: e.target.value })} /></label>
             <label className="field"><span>Holidays (one per line)</span><textarea rows="5" value={form.holidays} onChange={(e) => setForm({ ...form, holidays: e.target.value })} /></label>
-            <button className="primary-button" type="submit">Save settings</button>
+            <button className="primary-button" type="submit" disabled={!canEdit}>Save settings</button>
+            {!canEdit ? <p className="helper-text">You can view settings, but your current role does not have edit access.</p> : null}
           </form>
         </section>
       )}

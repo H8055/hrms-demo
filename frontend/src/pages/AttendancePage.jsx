@@ -4,8 +4,8 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 export default function AttendancePage() {
-  const { user } = useAuth();
-  const isElevated = ['admin', 'hr', 'manager'].includes(user.role);
+  const { hasPermission } = useAuth();
+  const canApprove = hasPermission('attendance', 'approve');
   const [summary, setSummary] = useState(null);
   const [myItems, setMyItems] = useState([]);
   const [adminItems, setAdminItems] = useState([]);
@@ -16,7 +16,7 @@ export default function AttendancePage() {
   async function loadData() {
     try {
       const requests = [api.get('/attendance/summary'), api.get('/attendance/mine')];
-      if (isElevated) requests.push(api.get('/attendance'));
+      if (canApprove) requests.push(api.get('/attendance'));
       const [summaryRes, mineRes, adminRes] = await Promise.all(requests);
       setSummary(summaryRes.data);
       setMyItems(mineRes.data.items || []);
@@ -28,7 +28,7 @@ export default function AttendancePage() {
 
   useEffect(() => {
     loadData();
-  }, [isElevated]);
+  }, [canApprove]);
 
   const pendingRegularizations = useMemo(
     () => adminItems.filter((item) => item.status === 'regularization-pending' || item.regularization?.status === 'pending'),
@@ -137,12 +137,12 @@ export default function AttendancePage() {
         <article className="card detail-card">
           <div className="section-header">
             <div>
-              <h3>{isElevated ? 'Attendance admin queue' : 'Attendance guidance'}</h3>
-              <p>{isElevated ? 'Review pending regularization requests and view all records.' : 'Your manager or HR will review regularization requests.'}</p>
+              <h3>{canApprove ? 'Attendance admin queue' : 'Attendance guidance'}</h3>
+              <p>{canApprove ? 'Review pending regularization requests and view all records.' : 'Your manager or HR will review regularization requests.'}</p>
             </div>
           </div>
 
-          {!isElevated ? (
+          {!canApprove ? (
             <div className="empty-state">You can check in/out from this page, and all history stays visible here.</div>
           ) : (
             <div className="detail-stack">

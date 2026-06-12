@@ -30,11 +30,34 @@ export function AuthProvider({ children }) {
     bootstrapAuth();
   }, []);
 
-  const value = useMemo(
-    () => ({
+  const value = useMemo(() => {
+    const permissions = user?.permissions || {};
+
+    function hasPermission(moduleKey, action = 'view') {
+      if (!user) return false;
+      if (user.role === 'admin') return true;
+
+      const modulePermission = permissions[moduleKey];
+      if (!modulePermission?.enabled) return false;
+      return (modulePermission.actions || []).includes(action);
+    }
+
+    function canSeeModule(moduleKey, requiredAction = 'view') {
+      if (!user) return false;
+      if (user.role === 'admin') return true;
+
+      const modulePermission = permissions[moduleKey];
+      if (!modulePermission?.enabled || !modulePermission?.showInSidebar) return false;
+      return (modulePermission.actions || []).includes(requiredAction);
+    }
+
+    return {
       user,
       loading,
+      permissions,
       isAuthenticated: Boolean(user),
+      hasPermission,
+      canSeeModule,
       async login(credentials) {
         const { data } = await api.post('/auth/login', credentials);
         localStorage.setItem('hrms_access_token', data.accessToken);
@@ -54,9 +77,8 @@ export function AuthProvider({ children }) {
         setUser(data.user);
         return data.user;
       }
-    }),
-    [user, loading]
-  );
+    };
+  }, [user, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

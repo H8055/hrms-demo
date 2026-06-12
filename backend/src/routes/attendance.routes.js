@@ -9,21 +9,22 @@ import {
   listMyAttendance,
   regularizeAttendance
 } from '../controllers/attendance.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, checkPermission } from '../middleware/auth.js';
 
 const router = Router();
 
 router.use(authenticate);
-router.get('/mine', listMyAttendance);
-router.get('/summary', getAttendanceSummary);
-router.post('/check-in', checkIn);
-router.post('/check-out', checkOut);
+router.get('/mine', checkPermission('attendance', 'view'), listMyAttendance);
+router.get('/summary', checkPermission('attendance', 'view'), getAttendanceSummary);
+router.post('/check-in', checkPermission('attendance', 'create'), checkIn);
+router.post('/check-out', checkPermission('attendance', 'create'), checkOut);
 router.post(
   '/regularize',
+  checkPermission('attendance', 'create'),
   [body('date').notEmpty().withMessage('date is required'), body('reason').trim().notEmpty().withMessage('reason is required')],
   regularizeAttendance
 );
-router.get('/', authorize('admin', 'hr', 'manager'), listAttendance);
-router.put('/:id/regularization-decision', authorize('admin', 'hr', 'manager'), decideRegularization);
+router.get('/', checkPermission('attendance', 'view'), listAttendance);
+router.put('/:id/regularization-decision', checkPermission('attendance', 'approve'), decideRegularization);
 
 export default router;

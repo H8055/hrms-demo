@@ -1,55 +1,38 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
-import DashboardPage from "./pages/DashboardPage";
-import LoginPage from "./pages/LoginPage";
-import SetupAdminPage from "./pages/SetupAdminPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import AdvanceRequestPage from "./pages/AdvanceRequestPage";
-import AdvanceAdminPage from "./pages/AdvanceAdminPage";
-import MyAdvancesPage from "./pages/MyAdvancesPage";
-import EmployeesPage from "./pages/EmployeesPage";
-import AttendancePage from "./pages/AttendancePage";
-import LeavePage from "./pages/LeavePage";
-import PayrollPage from "./pages/PayrollPage";
-import PerformancePage from "./pages/PerformancePage";
-import ReportsPage from "./pages/ReportsPage";
-import SettingsPage from "./pages/SettingsPage";
-import AuditLogsPage from "./pages/AuditLogsPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import { useAuth } from "./context/AuthContext";
+import { Navigate, Route, Routes } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardPage from './pages/DashboardPage';
+import LoginPage from './pages/LoginPage';
+import SetupAdminPage from './pages/SetupAdminPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import AdvanceRequestPage from './pages/AdvanceRequestPage';
+import AdvanceAdminPage from './pages/AdvanceAdminPage';
+import MyAdvancesPage from './pages/MyAdvancesPage';
+import EmployeesPage from './pages/EmployeesPage';
+import AttendancePage from './pages/AttendancePage';
+import LeavePage from './pages/LeavePage';
+import PayrollPage from './pages/PayrollPage';
+import PerformancePage from './pages/PerformancePage';
+import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
+import AuditLogsPage from './pages/AuditLogsPage';
+import PermissionsPage from './pages/PermissionsPage';
+import NotFoundPage from './pages/NotFoundPage';
+import { useAuth } from './context/AuthContext';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
 
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
-      />
-      <Route
-        path="/setup-admin"
-        element={
-          isAuthenticated ? <Navigate to="/" replace /> : <SetupAdminPage />
-        }
-      />
-      <Route
-        path="/forgot-password"
-        element={
-          isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />
-        }
-      />
-      <Route
-        path="/reset-password"
-        element={
-          isAuthenticated ? <Navigate to="/" replace /> : <ResetPasswordPage />
-        }
-      />
+      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/setup-admin" element={isAuthenticated ? <Navigate to="/" replace /> : <SetupAdminPage />} />
+      <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />} />
+      <Route path="/reset-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ResetPasswordPage />} />
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'dashboard', action: 'view' }}>
             <DashboardPage />
           </ProtectedRoute>
         }
@@ -57,7 +40,7 @@ export default function App() {
       <Route
         path="/employees"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'employee', action: 'view' }}>
             <EmployeesPage />
           </ProtectedRoute>
         }
@@ -65,7 +48,7 @@ export default function App() {
       <Route
         path="/attendance"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'attendance', action: 'view' }}>
             <AttendancePage />
           </ProtectedRoute>
         }
@@ -73,7 +56,7 @@ export default function App() {
       <Route
         path="/leaves"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'leave', action: 'view' }}>
             <LeavePage />
           </ProtectedRoute>
         }
@@ -81,7 +64,7 @@ export default function App() {
       <Route
         path="/advances/request"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'advance', action: 'create' }}>
             <AdvanceRequestPage />
           </ProtectedRoute>
         }
@@ -89,7 +72,7 @@ export default function App() {
       <Route
         path="/advances/my"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'advance', action: 'view' }}>
             <MyAdvancesPage />
           </ProtectedRoute>
         }
@@ -97,7 +80,7 @@ export default function App() {
       <Route
         path="/advances/admin"
         element={
-          <ProtectedRoute roles={["admin", "hr", "manager"]}>
+          <ProtectedRoute permission={{ module: 'advance', action: 'approve' }}>
             <AdvanceAdminPage />
           </ProtectedRoute>
         }
@@ -105,7 +88,7 @@ export default function App() {
       <Route
         path="/payroll"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'payroll', action: 'view' }}>
             <PayrollPage />
           </ProtectedRoute>
         }
@@ -113,7 +96,7 @@ export default function App() {
       <Route
         path="/performance"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission={{ module: 'performance', action: 'view' }}>
             <PerformancePage />
           </ProtectedRoute>
         }
@@ -121,7 +104,7 @@ export default function App() {
       <Route
         path="/reports"
         element={
-          <ProtectedRoute roles={["admin", "hr", "manager"]}>
+          <ProtectedRoute permission={{ module: 'reports', action: 'view' }}>
             <ReportsPage />
           </ProtectedRoute>
         }
@@ -129,15 +112,23 @@ export default function App() {
       <Route
         path="/settings"
         element={
-          <ProtectedRoute roles={["admin", "hr"]}>
+          <ProtectedRoute permission={{ module: 'settings', action: 'view' }}>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/permissions"
+        element={
+          <ProtectedRoute permission={{ module: 'permissions', action: 'view' }}>
+            <PermissionsPage />
           </ProtectedRoute>
         }
       />
       <Route
         path="/audit-logs"
         element={
-          <ProtectedRoute roles={["admin", "hr"]}>
+          <ProtectedRoute permission={{ module: 'permissions', action: 'view' }}>
             <AuditLogsPage />
           </ProtectedRoute>
         }

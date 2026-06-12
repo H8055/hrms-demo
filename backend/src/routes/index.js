@@ -9,6 +9,7 @@ import leaveRoutes from './leave.routes.js';
 import notificationRoutes from './notification.routes.js';
 import payrollRoutes from './payroll.routes.js';
 import performanceRoutes from './performance.routes.js';
+import permissionRoutes from './permission.routes.js';
 import reportRoutes from './report.routes.js';
 import settingsRoutes from './settings.routes.js';
 
@@ -24,6 +25,7 @@ router.use('/payroll', payrollRoutes);
 router.use('/performance', performanceRoutes);
 router.use('/reports', reportRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/permissions', permissionRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/audit-logs', auditRoutes);
 

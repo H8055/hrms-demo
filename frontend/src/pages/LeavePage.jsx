@@ -11,8 +11,8 @@ const initialForm = {
 };
 
 export default function LeavePage() {
-  const { user } = useAuth();
-  const isElevated = ['admin', 'hr', 'manager'].includes(user.role);
+  const { hasPermission } = useAuth();
+  const canApprove = hasPermission('leave', 'approve');
   const [form, setForm] = useState(initialForm);
   const [summary, setSummary] = useState(null);
   const [myItems, setMyItems] = useState([]);
@@ -23,7 +23,7 @@ export default function LeavePage() {
   async function loadData() {
     try {
       const requests = [api.get('/leaves/summary'), api.get('/leaves/mine')];
-      if (isElevated) requests.push(api.get('/leaves'));
+      if (canApprove) requests.push(api.get('/leaves'));
       const [summaryRes, mineRes, adminRes] = await Promise.all(requests);
       setSummary(summaryRes.data);
       setMyItems(mineRes.data.items || []);
@@ -35,7 +35,7 @@ export default function LeavePage() {
 
   useEffect(() => {
     loadData();
-  }, [isElevated]);
+  }, [canApprove]);
 
   const pendingLeaves = useMemo(() => adminItems.filter((item) => item.status === 'pending'), [adminItems]);
 
@@ -115,11 +115,11 @@ export default function LeavePage() {
         <article className="card detail-card">
           <div className="section-header">
             <div>
-              <h3>{isElevated ? 'Approval queue' : 'Approval flow'}</h3>
-              <p>{isElevated ? 'Approve or reject leave requests.' : 'Your request will notify HR / managers for review.'}</p>
+              <h3>{canApprove ? 'Approval queue' : 'Approval flow'}</h3>
+              <p>{canApprove ? 'Approve or reject leave requests.' : 'Your request will notify HR / managers for review.'}</p>
             </div>
           </div>
-          {!isElevated ? (
+          {!canApprove ? (
             <div className="empty-state">You can track all leave decisions from this page.</div>
           ) : (
             <div className="detail-stack">

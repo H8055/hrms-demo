@@ -12,8 +12,8 @@ const initialForm = {
 };
 
 export default function PerformancePage() {
-  const { user } = useAuth();
-  const canManage = ['admin', 'hr', 'manager'].includes(user.role);
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission('performance', 'create') || hasPermission('performance', 'approve') || hasPermission('performance', 'edit');
   const [summary, setSummary] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [reviews, setReviews] = useState([]);

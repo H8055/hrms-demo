@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { createReview, getPerformanceSummary, listReviews } from '../controllers/performance.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, checkPermission } from '../middleware/auth.js';
 
 const router = Router();
 
 router.use(authenticate);
-router.get('/summary', getPerformanceSummary);
-router.get('/', listReviews);
+router.get('/summary', checkPermission('performance', 'view'), getPerformanceSummary);
+router.get('/', checkPermission('performance', 'view'), listReviews);
 router.post(
   '/',
-  authorize('admin', 'hr', 'manager'),
+  checkPermission('performance', 'create'),
   [
     body('userId').notEmpty().withMessage('userId is required'),
     body('cycle').trim().notEmpty().withMessage('cycle is required'),

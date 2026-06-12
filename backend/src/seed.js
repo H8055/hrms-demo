@@ -9,7 +9,9 @@ import { Notification } from './models/Notification.js';
 import { PayrollRecord } from './models/PayrollRecord.js';
 import { PerformanceReview } from './models/PerformanceReview.js';
 import { SalaryStructure } from './models/SalaryStructure.js';
+import { RolePermission } from './models/RolePermission.js';
 import { User } from './models/User.js';
+import { seedDefaultRolePermissions } from './services/permission.service.js';
 
 async function createUser(payload) {
   const passwordHash = await bcrypt.hash('Password@123', 10);
@@ -29,6 +31,7 @@ async function seed() {
     PayrollRecord.deleteMany({}),
     PerformanceReview.deleteMany({}),
     SalaryStructure.deleteMany({}),
+    RolePermission.deleteMany({}),
     User.deleteMany({})
   ]);
 
@@ -153,6 +156,8 @@ async function seed() {
     feedback: 'Strong ownership and consistent delivery.',
     status: 'completed'
   });
+
+  await seedDefaultRolePermissions();
 
   console.log('Seed completed');
   console.log('Login users:');

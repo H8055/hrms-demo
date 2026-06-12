@@ -13,9 +13,8 @@ const initialStructure = {
 };
 
 export default function PayrollPage() {
-  const { user } = useAuth();
-  const isElevated = ['admin', 'hr', 'manager'].includes(user.role);
-  const canManage = ['admin', 'hr'].includes(user.role);
+  const { user, hasPermission } = useAuth();
+  const canManage = hasPermission('payroll', 'edit') || hasPermission('payroll', 'create') || hasPermission('payroll', 'approve');
   const [summary, setSummary] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [structures, setStructures] = useState([]);
@@ -47,8 +46,8 @@ export default function PayrollPage() {
   }, [canManage]);
 
   const myLatestPayrolls = useMemo(
-    () => payrolls.filter((item) => (isElevated ? true : item.user?.id === user.id)).slice(0, 12),
-    [payrolls, isElevated, user.id]
+    () => payrolls.filter((item) => (canManage ? true : item.user?.id === user.id)).slice(0, 12),
+    [payrolls, canManage, user.id]
   );
 
   async function saveStructure(event) {
@@ -147,7 +146,7 @@ export default function PayrollPage() {
         <article className="card detail-card">
           <div className="section-header">
             <div>
-              <h3>{isElevated ? 'Payroll records' : 'Recent payslips'}</h3>
+              <h3>{canManage ? 'Payroll records' : 'Recent payslips'}</h3>
               <p>Net pay includes payroll deductions and linked advance deductions.</p>
             </div>
           </div>

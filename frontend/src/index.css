@@ -990,3 +990,85 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.unsaved-banner {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.unsaved-banner p,
+.permission-module-head p,
+.role-note-card p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.permission-layout {
+  align-items: start;
+}
+
+.permission-role-tabs,
+.permission-module-list,
+.permission-actions-grid,
+.permission-switch-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.permission-role-tabs {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  margin-bottom: 1rem;
+}
+
+.role-note-card,
+.permission-module-card {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.permission-module-card + .permission-module-card {
+  margin-top: 0.9rem;
+}
+
+.permission-module-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.permission-switch-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.permission-actions-grid {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+.inline-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text);
+}
+
+.inline-switch input {
+  width: 18px;
+  min-height: auto;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+}
+
+.action-chip {
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}

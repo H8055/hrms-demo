@@ -20,7 +20,7 @@ const initialForm = {
 };
 
 export default function EmployeesPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [items, setItems] = useState([]);
   const [orgChart, setOrgChart] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -29,13 +29,14 @@ export default function EmployeesPage() {
   const [form, setForm] = useState(initialForm);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const isElevated = ['admin', 'hr', 'manager'].includes(user.role);
-  const canManage = ['admin', 'hr'].includes(user.role);
+  const canViewDirectory = user.role !== 'employee';
+  const canManage = hasPermission('employee', 'create') || hasPermission('employee', 'edit');
+  const canDeactivate = hasPermission('employee', 'delete');
 
   async function loadData() {
     setError('');
     try {
-      if (isElevated) {
+      if (canViewDirectory) {
         const [employeesRes, orgRes] = await Promise.all([
           api.get(`/employees${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ''}`),
           api.get('/employees/org-chart')
@@ -61,7 +62,7 @@ export default function EmployeesPage() {
   useEffect(() => {
     const timeoutId = window.setTimeout(loadData, 200);
     return () => window.clearTimeout(timeoutId);
-  }, [search, isElevated]);
+  }, [search, canViewDirectory]);
 
   function selectEmployee(employee) {
     setSelectedId(employee.id);
@@ -130,7 +131,7 @@ export default function EmployeesPage() {
     }
   }
 
-  if (!isElevated) {
+  if (!canViewDirectory) {
     return (
       <AppLayout title="My Profile" description="Self-service profile view from the employee management sprint.">
         <section className="single-column-layout">
@@ -231,11 +232,11 @@ export default function EmployeesPage() {
               <label className="field"><span>Address</span><textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} rows="3" /></label>
               <div className="action-row">
                 <button className="primary-button" type="submit">{selectedId ? 'Save changes' : 'Create employee'}</button>
-                {selectedId ? <button className="danger-button" type="button" onClick={deactivateEmployee}>Mark exited</button> : null}
+                {selectedId && canDeactivate ? <button className="danger-button" type="button" onClick={deactivateEmployee}>Mark exited</button> : null}
               </div>
             </form>
           ) : (
-            <div className="empty-state">Managers can review employees here. Only Admin/HR can edit records.</div>
+            <div className="empty-state">You can review employee details here. Create/edit controls appear only when your role permission allows them.</div>
           )}
 
           <div className="detail-section">
