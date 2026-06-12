@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRMS Responsive Preview</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121b2d;
+      --border: rgba(255,255,255,.08);
+      --text: #e6eef8;
+      --muted: #95a2b8;
+      --primary: #4f8cff;
+      --success: #11b77c;
+      --danger: #ef5b71;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(79,140,255,.18), transparent 35%),
+        radial-gradient(circle at right center, rgba(17,183,124,.12), transparent 30%),
+        var(--bg);
+    }
+    .page { padding: 20px; display: grid; gap: 20px; }
+    .hero, .card { background: rgba(18,27,45,.92); border: 1px solid var(--border); border-radius: 24px; padding: 20px; }
+    .hero h1, .card h2, .card h3 { margin: 0 0 10px; }
+    .hero p, .card p, .muted { color: var(--muted); }
+    .stats, .grid, .nav, .requests { display: grid; gap: 14px; }
+    .stats { grid-template-columns: repeat(1, minmax(0,1fr)); }
+    .stat, .mini { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.06); border-radius: 18px; padding: 16px; }
+    .shell { display: grid; gap: 20px; }
+    .sidebar { background: rgba(13,19,33,.96); border: 1px solid var(--border); border-radius: 24px; padding: 20px; }
+    .nav a { background: rgba(255,255,255,.04); border-radius: 14px; padding: 14px 16px; color: var(--text); text-decoration: none; }
+    .nav a.active { background: rgba(79,140,255,.16); }
+    .row { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .badge { display: inline-flex; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .pending { background: rgba(255,255,255,.1); }
+    .approved { background: rgba(79,140,255,.16); color: #c7dbff; }
+    .paid { background: rgba(17,183,124,.16); color: #c7ffe8; }
+    .danger { background: rgba(239,91,113,.16); color: #ffd7dd; }
+    .request { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 18px; padding: 16px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .btn { border: 0; border-radius: 12px; min-height: 42px; padding: 0 14px; color: white; background: var(--primary); }
+    .btn.alt { background: rgba(255,255,255,.1); }
+    .btn.reject { background: rgba(239,91,113,.18); color: #ffd7dd; }
+    .form { display: grid; gap: 14px; }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    input, textarea {
+      width: 100%; min-height: 48px; padding: 12px 14px; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); color: var(--text);
+    }
+    textarea { min-height: 110px; }
+    @media (min-width: 768px) {
+      .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .form-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (min-width: 1080px) {
+      .shell { grid-template-columns: 280px 1fr; }
+      .stats { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="row">
+        <div>
+          <h1>HRMS Responsive Preview</h1>
+          <p>Mobile-first dashboard shell and Advance Request module based on your sprint plan.</p>
+        </div>
+        <span class="badge approved">375px / 768px / 1280px ready</span>
+      </div>
+    </section>
+
+    <section class="shell">
+      <aside class="sidebar">
+        <h3>Navigation</h3>
+        <div class="nav">
+          <a class="active" href="#">Dashboard</a>
+          <a href="#">Request Advance</a>
+          <a href="#">My Advances</a>
+          <a href="#">Advance Admin</a>
+        </div>
+      </aside>
+
+      <div style="display:grid;gap:20px;">
+        <section class="card">
+          <h2>Dashboard metrics</h2>
+          <div class="stats">
+            <div class="stat"><strong>Admin</strong><div class="muted">Signed in role</div></div>
+            <div class="stat"><strong>14</strong><div class="muted">Visible requests</div></div>
+            <div class="stat"><strong>5</strong><div class="muted">Pending approvals</div></div>
+            <div class="stat"><strong>₹1,25,000</strong><div class="muted">Disbursed this month</div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row">
+            <div>
+              <h2>Employee Advance Form</h2>
+              <p>Touch-friendly controls and stacked layout on mobile.</p>
+            </div>
+            <button class="btn">Submit request</button>
+          </div>
+          <div class="form">
+            <div class="form-grid">
+              <div><div class="muted">Amount</div><input value="25000" /></div>
+              <div><div class="muted">Repayment plan</div><input value="Deduct over 5 salary cycles" /></div>
+            </div>
+            <div><div class="muted">Reason</div><textarea>Medical emergency support for immediate family expenses.</textarea></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Admin request queue</h2>
+          <div class="requests">
+            <div class="request">
+              <div class="row"><strong>Riya Sharma</strong><span class="badge pending">pending</span></div>
+              <p>₹20,000 • Relocation support • 3 salary cycles</p>
+              <div class="actions">
+                <button class="btn">Approve</button>
+                <button class="btn reject">Reject</button>
+              </div>
+            </div>
+            <div class="request">
+              <div class="row"><strong>Arjun Verma</strong><span class="badge approved">approved</span></div>
+              <p>₹35,000 • Medical support • 6 salary cycles</p>
+              <div class="actions">
+                <button class="btn alt">Mark as paid</button>
+              </div>
+            </div>
+            <div class="request">
+              <div class="row"><strong>Neha Patel</strong><span class="badge paid">paid</span></div>
+              <p>₹15,000 • Education support • UPI transfer completed</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
