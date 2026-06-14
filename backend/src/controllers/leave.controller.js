@@ -5,6 +5,7 @@ import { User } from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { createNotification, createNotifications } from '../services/notification.service.js';
+import { canUserPerform, getRolesWithPermission } from '../services/permission.service.js';
 
 function validationErrorResult(req, res) {
   const errors = validationResult(req);
@@ -98,7 +99,8 @@ export const createLeave = asyncHandler(async (req, res) => {
     metadata: { leaveType, days }
   });
 
-  const reviewers = await User.find({ role: { $in: ['admin', 'hr', 'manager'] }, isActive: true }).select('_id');
+  const reviewerRoles = await getRolesWithPermission('leave', 'approve');
+  const reviewers = await User.find({ role: { $in: reviewerRoles }, isActive: true }).select('_id');
   await createNotifications(
     reviewers.map((reviewer) => ({
       recipient: reviewer._id,
@@ -202,7 +204,8 @@ export const decideLeave = asyncHandler(async (req, res) => {
 
 export const getLeaveSummary = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select('leaveBalances');
-  const query = ['admin', 'hr', 'manager'].includes(req.user.role) ? {} : { user: req.user._id };
+  const canManageLeaves = await canUserPerform(req.user, 'leave', 'approve');
+  const query = canManageLeaves ? {} : { user: req.user._id };
   const items = await LeaveRequest.find(query);
 
   res.json({

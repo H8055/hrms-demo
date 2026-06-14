@@ -2,18 +2,18 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const links = [
-  { to: '/', label: 'Dashboard', module: 'dashboard', action: 'view' },
-  { to: '/employees', label: 'Employees', module: 'employee', action: 'view' },
-  { to: '/attendance', label: 'Attendance', module: 'attendance', action: 'view' },
-  { to: '/leaves', label: 'Leave', module: 'leave', action: 'view' },
-  { to: '/advances/request', label: 'Request Advance', module: 'advance', action: 'create' },
-  { to: '/advances/my', label: 'My Advances', module: 'advance', action: 'view' },
-  { to: '/advances/admin', label: 'Advance Admin', module: 'advance', action: 'approve' },
-  { to: '/payroll', label: 'Payroll', module: 'payroll', action: 'view' },
-  { to: '/performance', label: 'Performance', module: 'performance', action: 'view' },
-  { to: '/reports', label: 'Reports', module: 'reports', action: 'view' },
-  { to: '/settings', label: 'Settings', module: 'settings', action: 'view' },
-  { to: '/permissions', label: 'Permissions', module: 'permissions', action: 'view' }
+  { to: '/', label: 'Dashboard', icon: '◫', module: 'dashboard', action: 'view', hint: 'Overview and KPIs' },
+  { to: '/employees', label: 'Employees', icon: '👥', module: 'employee', action: 'view', hint: 'Profiles and org chart' },
+  { to: '/attendance', label: 'Attendance', icon: '⏱', module: 'attendance', action: 'view', hint: 'Check-in and regularization' },
+  { to: '/leaves', label: 'Leave', icon: '🗓', module: 'leave', action: 'view', hint: 'Balances and approvals' },
+  { to: '/advances/request', label: 'Request Advance', icon: '₹', module: 'advance', action: 'create', hint: 'Create advance request' },
+  { to: '/advances/my', label: 'My Advances', icon: '📜', module: 'advance', action: 'view', hint: 'Status and history' },
+  { to: '/advances/admin', label: 'Advance Workflow', icon: '✔', module: 'advance', action: 'approve', hint: 'Approval and payout queues' },
+  { to: '/payroll', label: 'Payroll', icon: '💼', module: 'payroll', action: 'view', hint: 'Salary structures and payslips' },
+  { to: '/performance', label: 'Performance', icon: '★', module: 'performance', action: 'view', hint: 'Reviews and goals' },
+  { to: '/reports', label: 'Reports', icon: '📈', module: 'reports', action: 'view', hint: 'Exports and analytics' },
+  { to: '/settings', label: 'Settings', icon: '⚙', module: 'settings', action: 'view', hint: 'Company and masters' },
+  { to: '/permissions', label: 'Permissions', icon: '🔐', module: 'permissions', action: 'view', hint: 'Roles and sidebar control' }
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -21,7 +21,10 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const visibleLinks = links.filter((link) => {
     if (link.to === '/advances/admin') {
-      return canSeeModule(link.module, link.action) && hasPermission(link.module, link.action);
+      return (
+        canSeeModule('advance', 'view') &&
+        (hasPermission('advance', 'approve') || hasPermission('advance', 'pay'))
+      );
     }
 
     return canSeeModule(link.module, link.action) || (link.to === '/' && hasPermission('dashboard', 'view'));
@@ -32,21 +35,28 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className={`sidebar-backdrop ${isOpen ? 'show' : ''}`} onClick={onClose} />
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <img src="/mslogo.png" alt="MS HRMS Logo" className="brand-mark" />
+          <img src="/mslogo.png" alt="MS HRMS Logo" className="brand-logo" />
           <div>
             <strong>MS HRMS</strong>
           </div>
         </div>
 
+        <div className="sidebar-section-label">Workspace</div>
         <nav className="sidebar-nav">
           {visibleLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               onClick={onClose}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              className={({ isActive }) => `nav-link nav-link-rich ${isActive ? 'active' : ''}`}
             >
-              {link.label}
+              <span className="nav-icon" aria-hidden="true">
+                {link.icon}
+              </span>
+              <span className="nav-copy">
+                <strong>{link.label}</strong>
+                <small>{link.hint}</small>
+              </span>
             </NavLink>
           ))}
         </nav>

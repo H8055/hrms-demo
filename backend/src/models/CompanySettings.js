@@ -29,6 +29,16 @@ const companySettingsSchema = new mongoose.Schema(
     holidays: {
       type: [String],
       default: []
+    },
+    advanceWorkflow: {
+      approvalDepartments: {
+        type: [String],
+        default: ['Human Resources']
+      },
+      payoutDepartments: {
+        type: [String],
+        default: ['Accounts']
+      }
     }
   },
   { timestamps: true }

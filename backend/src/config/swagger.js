@@ -431,6 +431,32 @@ export const swaggerSpec = {
             properties: {
               status: { type: 'string', example: 'ok' },
               service: { type: 'string', example: 'hrms-api' },
+              environment: { type: 'string', example: 'development' },
+              mongoState: { type: 'number', example: 1 },
+              timestamp: { type: 'string', format: 'date-time' }
+            }
+          })
+        }
+      }
+    },
+    '/health/ready': {
+      get: {
+        tags: ['Health'],
+        summary: 'Readiness check for deployment probes',
+        responses: {
+          200: response('Application is ready', {
+            type: 'object',
+            properties: {
+              ready: { type: 'boolean', example: true },
+              database: { type: 'string', example: 'connected' },
+              timestamp: { type: 'string', format: 'date-time' }
+            }
+          }),
+          503: response('Application is not ready', {
+            type: 'object',
+            properties: {
+              ready: { type: 'boolean', example: false },
+              database: { type: 'string', example: 'not-ready' },
               timestamp: { type: 'string', format: 'date-time' }
             }
           })
@@ -1389,6 +1415,123 @@ export const swaggerSpec = {
             type: 'object',
             properties: { message: { type: 'string' }, settings: { $ref: '#/components/schemas/CompanySettings' } }
           }),
+          ...errorResponses
+        }
+      }
+    },
+    '/settings/form-options': {
+      get: {
+        tags: ['Settings'],
+        summary: 'Get active roles and master data for dynamic form dropdowns',
+        security: authSecurity,
+        responses: {
+          200: response('Form option payload', {
+            type: 'object',
+            properties: {
+              roles: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              masterData: { type: 'object', additionalProperties: true }
+            }
+          }),
+          ...errorResponses
+        }
+      }
+    },
+    '/settings/bundle': {
+      get: {
+        tags: ['Settings'],
+        summary: 'Get full settings bundle with company settings, roles, categories, and grouped masters',
+        security: authSecurity,
+        responses: {
+          200: response('Full settings bundle', {
+            type: 'object',
+            properties: {
+              settings: { $ref: '#/components/schemas/CompanySettings' },
+              roles: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              masterData: { type: 'object', additionalProperties: true },
+              categories: { type: 'array', items: { type: 'string' } }
+            }
+          }),
+          ...errorResponses
+        }
+      }
+    },
+    '/settings/roles': {
+      get: {
+        tags: ['Settings'],
+        summary: 'List dynamic roles',
+        security: authSecurity,
+        responses: {
+          200: response('Role list', { type: 'object', properties: { items: { type: 'array', items: { type: 'object', additionalProperties: true } } } }),
+          ...errorResponses
+        }
+      },
+      post: {
+        tags: ['Settings'],
+        summary: 'Create dynamic role',
+        security: authSecurity,
+        requestBody: {
+          required: true,
+          content: json({ type: 'object', required: ['label'], properties: { key: { type: 'string' }, label: { type: 'string' }, description: { type: 'string' }, isActive: { type: 'boolean' }, sortOrder: { type: 'number' } } })
+        },
+        responses: {
+          201: response('Role created', { type: 'object', properties: { message: { type: 'string' }, role: { type: 'object', additionalProperties: true } } }),
+          ...errorResponses
+        }
+      }
+    },
+    '/settings/roles/{id}': {
+      put: {
+        tags: ['Settings'],
+        summary: 'Update dynamic role',
+        security: authSecurity,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: json({ type: 'object', properties: { key: { type: 'string' }, label: { type: 'string' }, description: { type: 'string' }, isActive: { type: 'boolean' }, sortOrder: { type: 'number' } } })
+        },
+        responses: {
+          200: response('Role updated', { type: 'object', properties: { message: { type: 'string' }, role: { type: 'object', additionalProperties: true } } }),
+          ...errorResponses
+        }
+      }
+    },
+    '/settings/masters': {
+      get: {
+        tags: ['Settings'],
+        summary: 'List grouped master data or items by category',
+        security: authSecurity,
+        parameters: [{ in: 'query', name: 'category', schema: { type: 'string' } }],
+        responses: {
+          200: response('Master data list', { type: 'object', additionalProperties: true }),
+          ...errorResponses
+        }
+      },
+      post: {
+        tags: ['Settings'],
+        summary: 'Create master data item',
+        security: authSecurity,
+        requestBody: {
+          required: true,
+          content: json({ type: 'object', required: ['category', 'label'], properties: { category: { type: 'string' }, key: { type: 'string' }, label: { type: 'string' }, description: { type: 'string' }, isActive: { type: 'boolean' }, sortOrder: { type: 'number' }, metadata: { type: 'object', additionalProperties: true } } })
+        },
+        responses: {
+          201: response('Master item created', { type: 'object', properties: { message: { type: 'string' }, item: { type: 'object', additionalProperties: true } } }),
+          ...errorResponses
+        }
+      }
+    },
+    '/settings/masters/{id}': {
+      put: {
+        tags: ['Settings'],
+        summary: 'Update master data item',
+        security: authSecurity,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: json({ type: 'object', properties: { category: { type: 'string' }, key: { type: 'string' }, label: { type: 'string' }, description: { type: 'string' }, isActive: { type: 'boolean' }, sortOrder: { type: 'number' }, metadata: { type: 'object', additionalProperties: true } } })
+        },
+        responses: {
+          200: response('Master item updated', { type: 'object', properties: { message: { type: 'string' }, item: { type: 'object', additionalProperties: true } } }),
           ...errorResponses
         }
       }

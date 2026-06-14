@@ -1,5 +1,5 @@
 import { validationResult } from 'express-validator';
-import { ACTION_KEYS, MODULE_KEYS, ROLE_KEYS } from '../config/permissions.js';
+import { ACTION_KEYS, MODULE_KEYS } from '../config/permissions.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { RolePermission } from '../models/RolePermission.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -13,6 +13,7 @@ import {
   serializePermissionDocument,
   upsertRoleModulePermission
 } from '../services/permission.service.js';
+import { roleExists } from '../services/role.service.js';
 
 function validationErrorResult(req, res) {
   const errors = validationResult(req);
@@ -23,8 +24,8 @@ function validationErrorResult(req, res) {
   return false;
 }
 
-function ensureValidRoleAndModule(role, moduleKey) {
-  if (!ROLE_KEYS.includes(role)) {
+async function ensureValidRoleAndModule(role, moduleKey) {
+  if (!(await roleExists(role))) {
     const error = new Error('Invalid role');
     error.statusCode = 400;
     throw error;
@@ -35,24 +36,6 @@ function ensureValidRoleAndModule(role, moduleKey) {
     error.statusCode = 400;
     throw error;
   }
-}
-
-async function mapPermissionDocument(role, moduleKey) {
-  const document = await RolePermission.findOne({ role, module: moduleKey }).populate('updatedBy', 'name email');
-
-  if (!document) {
-    return {
-      role,
-      module: moduleKey,
-      enabled: false,
-      showInSidebar: false,
-      actions: [],
-      updatedAt: null,
-      updatedBy: null
-    };
-  }
-
-  return serializePermissionDocument(document);
 }
 
 async function getPermissionAuditEntries(limit = 20) {
@@ -85,25 +68,22 @@ export const getMyPermissions = asyncHandler(async (req, res) => {
 });
 
 export const getPermissionsMeta = asyncHandler(async (req, res) => {
-  res.json(getPermissionMeta());
+  res.json(await getPermissionMeta());
 });
 
 export const getAllPermissions = asyncHandler(async (req, res) => {
-  const [permissionsByRole, auditLogs] = await Promise.all([
+  const [meta, permissionsByRole, auditLogs] = await Promise.all([
+    getPermissionMeta(),
     getAllRolePermissions(),
     getPermissionAuditEntries(10)
   ]);
 
-  res.json({
-    meta: getPermissionMeta(),
-    permissionsByRole,
-    auditLogs
-  });
+  res.json({ meta, permissionsByRole, auditLogs });
 });
 
 export const getRolePermissions = asyncHandler(async (req, res) => {
   const role = req.params.role;
-  if (!ROLE_KEYS.includes(role)) {
+  if (!(await roleExists(role))) {
     return res.status(400).json({ message: 'Invalid role' });
   }
 
@@ -116,7 +96,7 @@ export const replaceRoleModulePermissions = asyncHandler(async (req, res) => {
 
   const role = req.params.role;
   const moduleKey = req.params.module;
-  ensureValidRoleAndModule(role, moduleKey);
+  await ensureValidRoleAndModule(role, moduleKey);
 
   const before = await getRolePermissionMap(role);
   const document = await upsertRoleModulePermission({
@@ -153,7 +133,7 @@ export const toggleRoleModuleAction = asyncHandler(async (req, res) => {
   const role = req.params.role;
   const moduleKey = req.params.module;
   const action = req.params.action;
-  ensureValidRoleAndModule(role, moduleKey);
+  await ensureValidRoleAndModule(role, moduleKey);
 
   if (!ACTION_KEYS.includes(action)) {
     return res.status(400).json({ message: 'Invalid action' });
@@ -200,7 +180,7 @@ export const updateRoleModuleSidebar = asyncHandler(async (req, res) => {
 
   const role = req.params.role;
   const moduleKey = req.params.module;
-  ensureValidRoleAndModule(role, moduleKey);
+  await ensureValidRoleAndModule(role, moduleKey);
 
   const roleMap = await getRolePermissionMap(role);
   const current = roleMap[moduleKey] || { enabled: false, showInSidebar: false, actions: [] };
@@ -237,7 +217,7 @@ export const bulkUpdateRolePermissions = asyncHandler(async (req, res) => {
   if (validationErrorResult(req, res)) return;
 
   const { role, permissions } = req.body;
-  if (!ROLE_KEYS.includes(role)) {
+  if (!(await roleExists(role))) {
     return res.status(400).json({ message: 'Invalid role' });
   }
 

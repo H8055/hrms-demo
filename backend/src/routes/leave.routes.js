@@ -18,7 +18,7 @@ router.post(
   '/',
   checkPermission('leave', 'create'),
   [
-    body('leaveType').isIn(['annual', 'sick', 'casual', 'unpaid']).withMessage('invalid leaveType'),
+    body('leaveType').trim().notEmpty().withMessage('leaveType is required'),
     body('fromDate').notEmpty().withMessage('fromDate is required'),
     body('toDate').notEmpty().withMessage('toDate is required'),
     body('reason').trim().notEmpty().withMessage('reason is required')

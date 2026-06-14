@@ -1,5 +1,6 @@
-import { ACTION_KEYS, DEFAULT_ROLE_PERMISSIONS, MODULE_DEFINITIONS, MODULE_KEYS, ROLE_KEYS } from '../config/permissions.js';
+import { ACTION_KEYS, DEFAULT_ROLE_PERMISSIONS, MODULE_DEFINITIONS, MODULE_KEYS } from '../config/permissions.js';
 import { RolePermission } from '../models/RolePermission.js';
+import { getAllRoles, getRoleKeys } from './role.service.js';
 
 function uniqueActions(actions = []) {
   return [...new Set((actions || []).filter((action) => ACTION_KEYS.includes(action)))];
@@ -7,7 +8,7 @@ function uniqueActions(actions = []) {
 
 function buildModuleMap(config) {
   return MODULE_KEYS.reduce((acc, moduleKey) => {
-    const base = config[moduleKey] || { enabled: false, showInSidebar: false, actions: [] };
+    const base = config?.[moduleKey] || { enabled: false, showInSidebar: false, actions: [] };
     acc[moduleKey] = {
       enabled: Boolean(base.enabled),
       showInSidebar: Boolean(base.showInSidebar),
@@ -17,8 +18,12 @@ function buildModuleMap(config) {
   }, {});
 }
 
-function adminModuleMap() {
-  return buildModuleMap(DEFAULT_ROLE_PERMISSIONS.admin);
+function getDefaultModuleMapForRole(role) {
+  if (role === 'admin') {
+    return buildModuleMap(DEFAULT_ROLE_PERMISSIONS.admin);
+  }
+
+  return buildModuleMap(DEFAULT_ROLE_PERMISSIONS[role] || {});
 }
 
 export function normalizePermissionInput(input = {}) {
@@ -30,13 +35,14 @@ export function normalizePermissionInput(input = {}) {
 }
 
 export async function seedDefaultRolePermissions() {
+  const roleKeys = await getRoleKeys({ includeInactive: true });
   const operations = [];
 
-  for (const role of ROLE_KEYS) {
-    const moduleMap = buildModuleMap(DEFAULT_ROLE_PERMISSIONS[role]);
+  for (const role of roleKeys) {
+    const moduleMap = getDefaultModuleMapForRole(role);
 
     for (const moduleKey of MODULE_KEYS) {
-      const config = moduleMap[moduleKey];
+      const config = moduleMap[moduleKey] || { enabled: false, showInSidebar: false, actions: [] };
       operations.push(
         RolePermission.updateOne(
           { role, module: moduleKey },
@@ -63,34 +69,29 @@ export async function getRolePermissionDocuments(role) {
 }
 
 export async function getRolePermissionMap(role) {
-  if (role === 'admin') {
-    return adminModuleMap();
-  }
-
   const docs = await getRolePermissionDocuments(role);
   const byModule = Object.fromEntries(docs.map((doc) => [doc.module, normalizePermissionInput(doc)]));
+  const defaults = getDefaultModuleMapForRole(role);
 
   return MODULE_KEYS.reduce((acc, moduleKey) => {
-    acc[moduleKey] = byModule[moduleKey] || { enabled: false, showInSidebar: false, actions: [] };
+    acc[moduleKey] = byModule[moduleKey] || defaults[moduleKey] || { enabled: false, showInSidebar: false, actions: [] };
     return acc;
   }, {});
 }
 
 export async function getAllRolePermissions() {
   const docs = await RolePermission.find({}).sort({ role: 1, module: 1 });
+  const roles = await getAllRoles({ includeInactive: true });
   const grouped = {};
 
-  for (const role of ROLE_KEYS) {
-    grouped[role] = MODULE_KEYS.reduce((acc, moduleKey) => {
-      acc[moduleKey] = role === 'admin'
-        ? adminModuleMap()[moduleKey]
-        : { enabled: false, showInSidebar: false, actions: [] };
-      return acc;
-    }, {});
+  for (const role of roles) {
+    grouped[role.key] = getDefaultModuleMapForRole(role.key);
   }
 
   docs.forEach((doc) => {
-    if (doc.role === 'admin') return;
+    if (!grouped[doc.role]) {
+      grouped[doc.role] = getDefaultModuleMapForRole(doc.role);
+    }
     grouped[doc.role][doc.module] = normalizePermissionInput(doc);
   });
 
@@ -111,6 +112,26 @@ export async function canUserPerform(user, moduleKey, action = 'view') {
 
   if (!modulePermission?.enabled) return false;
   return modulePermission.actions.includes(action);
+}
+
+export async function getRolesWithPermission(moduleKey, action = 'view') {
+  const roles = await getAllRoles({ includeInactive: false });
+  const allowed = [];
+
+  for (const role of roles) {
+    if (role.key === 'admin') {
+      allowed.push(role.key);
+      continue;
+    }
+
+    const permissionMap = await getRolePermissionMap(role.key);
+    const modulePermission = permissionMap[moduleKey];
+    if (modulePermission?.enabled && modulePermission.actions.includes(action)) {
+      allowed.push(role.key);
+    }
+  }
+
+  return allowed;
 }
 
 export async function upsertRoleModulePermission({ role, moduleKey, data, updatedBy = null }) {
@@ -157,9 +178,18 @@ export function serializePermissionDocument(doc) {
   };
 }
 
-export function getPermissionMeta() {
+export async function getPermissionMeta() {
+  const roles = await getAllRoles({ includeInactive: true });
   return {
-    roles: ROLE_KEYS,
+    roles: roles.map((role) => role.key),
+    roleDetails: roles.map((role) => ({
+      key: role.key,
+      label: role.label,
+      description: role.description,
+      isSystem: role.isSystem,
+      isActive: role.isActive,
+      sortOrder: role.sortOrder
+    })),
     actions: ACTION_KEYS,
     modules: MODULE_DEFINITIONS
   };

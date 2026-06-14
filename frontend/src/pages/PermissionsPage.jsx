@@ -10,7 +10,7 @@ function clonePermissions(input) {
 export default function PermissionsPage() {
   const { hasPermission, refreshProfile } = useAuth();
   const canEdit = hasPermission('permissions', 'edit');
-  const [meta, setMeta] = useState({ roles: [], actions: [], modules: [] });
+  const [meta, setMeta] = useState({ roles: [], roleDetails: [], actions: [], modules: [] });
   const [activeRole, setActiveRole] = useState('admin');
   const [permissionsByRole, setPermissionsByRole] = useState({});
   const [savedPermissionsByRole, setSavedPermissionsByRole] = useState({});
@@ -43,6 +43,9 @@ export default function PermissionsPage() {
   }, []);
 
   const rolePermissions = permissionsByRole[activeRole] || {};
+  const activeRoleInfo = (meta.roleDetails || []).find((item) => item.key === activeRole);
+  const enabledModules = Object.values(rolePermissions).filter((item) => item.enabled).length;
+  const sidebarVisibleModules = Object.values(rolePermissions).filter((item) => item.showInSidebar).length;
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(permissionsByRole) !== JSON.stringify(savedPermissionsByRole),
     [permissionsByRole, savedPermissionsByRole]
@@ -79,6 +82,7 @@ export default function PermissionsPage() {
 
   return (
     <AppLayout
+      eyebrow="Governance & access control"
       title="Permission Management"
       description="Configure which role can access each module, what actions they can perform, and whether the module appears in the sidebar."
     >
@@ -89,8 +93,15 @@ export default function PermissionsPage() {
         <div className="empty-state">Loading permission matrix...</div>
       ) : (
         <>
+          <section className="stats-grid compact-grid">
+            <div className="stat-card"><p>Active role</p><h3>{activeRoleInfo?.label || activeRole}</h3><small>{activeRoleInfo?.description || 'Role under review'}</small></div>
+            <div className="stat-card"><p>Enabled modules</p><h3>{enabledModules}</h3><small>Modules available to this role</small></div>
+            <div className="stat-card"><p>Sidebar visible</p><h3>{sidebarVisibleModules}</h3><small>Modules currently shown in navigation</small></div>
+            <div className="stat-card"><p>Edit access</p><h3>{canEdit ? 'Yes' : 'Read-only'}</h3><small>Permission governance status</small></div>
+          </section>
+
           {hasUnsavedChanges ? (
-            <div className="card unsaved-banner">
+            <div className="card unsaved-banner card-elevated">
               <div>
                 <strong>Unsaved changes detected</strong>
                 <p>Save the active role after reviewing your permission edits.</p>
@@ -104,7 +115,7 @@ export default function PermissionsPage() {
           ) : null}
 
           <section className="split-layout permission-layout">
-            <article className="card">
+            <article className="card card-elevated">
               <div className="section-header wrap-on-mobile">
                 <div>
                   <h3>Role tabs</h3>
@@ -113,26 +124,37 @@ export default function PermissionsPage() {
               </div>
 
               <div className="permission-role-tabs">
-                {meta.roles.map((role) => (
+                {(meta.roleDetails?.length ? meta.roleDetails : meta.roles.map((role) => ({ key: role, label: role }))).map((role) => (
                   <button
-                    key={role}
+                    key={role.key}
                     type="button"
-                    className={`chip-button ${activeRole === role ? 'active' : ''}`}
-                    onClick={() => setActiveRole(role)}
+                    className={`chip-button ${activeRole === role.key ? 'active' : ''}`}
+                    onClick={() => setActiveRole(role.key)}
                   >
-                    {role}
-                    {role === 'admin' ? ' · locked' : ''}
+                    {role.label}
+                    {role.key === 'admin' ? ' · locked' : ''}
                   </button>
                 ))}
               </div>
 
               <div className="role-note-card">
-                <strong>{activeRole.toUpperCase()}</strong>
+                <strong>{activeRoleInfo?.label || activeRole.toUpperCase()}</strong>
                 <p>
                   {activeRole === 'admin'
                     ? 'Admin always has full access and cannot be restricted from the UI.'
-                    : 'This role can be configured by module, action, and sidebar visibility.'}
+                    : activeRoleInfo?.description || 'This role can be configured by module, action, and sidebar visibility.'}
                 </p>
+              </div>
+
+              <div className="feature-grid compact">
+                <div className="feature-card">
+                  <strong>Module enable/disable</strong>
+                  <span>Turn a module on or off for the selected role.</span>
+                </div>
+                <div className="feature-card">
+                  <strong>Sidebar control</strong>
+                  <span>Choose whether a module appears in the role’s navigation.</span>
+                </div>
               </div>
 
               {canEdit && activeRole !== 'admin' ? (
@@ -142,7 +164,7 @@ export default function PermissionsPage() {
               ) : null}
             </article>
 
-            <article className="card detail-card">
+            <article className="card detail-card card-elevated">
               <div className="section-header wrap-on-mobile">
                 <div>
                   <h3>Permission matrix</h3>
@@ -227,7 +249,7 @@ export default function PermissionsPage() {
           </section>
 
           <section className="single-column-layout">
-            <article className="card">
+            <article className="card card-elevated">
               <div className="section-header">
                 <div>
                   <h3>Permission audit trail</h3>

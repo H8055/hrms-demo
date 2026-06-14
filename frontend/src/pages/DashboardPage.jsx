@@ -27,8 +27,15 @@ const flowCardsByRole = {
   ]
 };
 
+const deliveryHighlights = [
+  'Dynamic roles and master data from settings',
+  'Delegable permissions and sidebar control',
+  'Employee documents with upload foundation',
+  'Swagger docs and production middleware base'
+];
+
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [summary, setSummary] = useState(null);
   const [recentItems, setRecentItems] = useState([]);
 
@@ -37,9 +44,7 @@ export default function DashboardPage() {
       try {
         const [summaryResponse, listResponse] = await Promise.all([
           api.get('/advances/summary'),
-          ['admin', 'hr', 'manager'].includes(user.role)
-            ? api.get('/advances?limit=5')
-            : api.get('/advances/mine')
+          hasPermission('advance', 'approve') ? api.get('/advances?limit=5') : api.get('/advances/mine')
         ]);
 
         setSummary(summaryResponse.data);
@@ -51,14 +56,15 @@ export default function DashboardPage() {
     }
 
     loadData();
-  }, [user.role]);
+  }, [user.role, hasPermission]);
 
   const roleCards = useMemo(() => flowCardsByRole[user.role] || flowCardsByRole.employee, [user.role]);
 
   return (
     <AppLayout
+      eyebrow="HRMS control center"
       title="Dashboard"
-      description="Reviewed against your client flow diagram and aligned around the priority Advance Request module."
+      description="Production-hardening, permissions, and dynamic master-data foundations are now reflected across the platform shell."
     >
       <section className="stats-grid">
         <StatCard title="Signed in as" value={user.role.toUpperCase()} hint={user.email} />
@@ -76,29 +82,69 @@ export default function DashboardPage() {
       </section>
 
       <section className="two-column-layout">
-        <article className="card">
+        <article className="card card-elevated">
           <div className="section-header">
             <div>
-              <h3>Flow review from your diagrams</h3>
+              <h3>Delivery highlights</h3>
+              <p>What is already moving the HRMS toward production readiness.</p>
+            </div>
+          </div>
+          <div className="feature-grid">
+            {deliveryHighlights.map((item) => (
+              <div className="feature-card" key={item}>
+                <strong>{item}</strong>
+                <span>Available in the current build and ready for deeper rollout across modules.</span>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="card card-elevated">
+          <div className="section-header">
+            <div>
+              <h3>Role experience</h3>
               <p>These cards reflect the employee / HR / line manager flow you shared.</p>
             </div>
           </div>
-
-          <div className="feature-grid">
+          <div className="list-stack">
             {roleCards.map((card) => (
-              <div className="feature-card" key={card.title}>
-                <strong>{card.title}</strong>
-                <span>{card.description}</span>
+              <div className="mini-history-item" key={card.title}>
+                <div>
+                  <strong>{card.title}</strong>
+                  <p>{card.description}</p>
+                </div>
+                <span className="status-chip approved">role-aware</span>
               </div>
             ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="two-column-layout">
+        <article className="card card-elevated">
+          <div className="section-header">
+            <div>
+              <h3>Advance lifecycle</h3>
+              <p>The priority workflow remains the most complete part of the HRMS.</p>
+            </div>
+          </div>
+          <div className="feature-grid">
             <div className="feature-card feature-card-highlight">
-              <strong>Advance lifecycle</strong>
-              <span>Submitted → pending → approved/rejected → paid → history log visible to employee and admin.</span>
+              <strong>Submitted → Pending → Approved / Rejected → Paid</strong>
+              <span>Employees and admins can both see the history log and current status.</span>
+            </div>
+            <div className="feature-card">
+              <strong>Notifications</strong>
+              <span>Email and in-app signals guide the request from submission to payout.</span>
+            </div>
+            <div className="feature-card">
+              <strong>Audit trail</strong>
+              <span>Every major action is tracked for traceability and governance.</span>
             </div>
           </div>
         </article>
 
-        <article className="card">
+        <article className="card card-elevated">
           <div className="section-header">
             <div>
               <h3>Latest advance activity</h3>

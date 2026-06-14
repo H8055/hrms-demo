@@ -46,10 +46,10 @@ router.put('/:id/approve', checkPermission('advance', 'approve'), approveAdvance
 router.put('/:id/reject', checkPermission('advance', 'approve'), rejectAdvance);
 router.put(
   '/:id/pay',
-  checkPermission('advance', 'approve'),
+  checkPermission('advance', 'pay'),
   [
     body('paymentDate').notEmpty().withMessage('paymentDate is required'),
-    body('paymentMode').isIn(['cash', 'bank', 'upi']).withMessage('paymentMode must be cash, bank or upi'),
+    body('paymentMode').trim().notEmpty().withMessage('paymentMode is required'),
     body('reference').optional().isString()
   ],
   payAdvance

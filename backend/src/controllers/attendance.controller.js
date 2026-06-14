@@ -4,6 +4,7 @@ import { User } from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { createNotifications } from '../services/notification.service.js';
+import { canUserPerform, getRolesWithPermission } from '../services/permission.service.js';
 
 function validationErrorResult(req, res) {
   const errors = validationResult(req);
@@ -47,7 +48,8 @@ function mapAttendance(record) {
 }
 
 async function notifyReviewers(record, actorName) {
-  const reviewers = await User.find({ role: { $in: ['admin', 'hr', 'manager'] }, isActive: true }).select('_id');
+  const reviewerRoles = await getRolesWithPermission('attendance', 'approve');
+  const reviewers = await User.find({ role: { $in: reviewerRoles }, isActive: true }).select('_id');
   await createNotifications(
     reviewers.map((reviewer) => ({
       recipient: reviewer._id,
@@ -223,8 +225,55 @@ export const decideRegularization = asyncHandler(async (req, res) => {
   res.json({ message: `Regularization ${decision}`, attendance: mapAttendance(record) });
 });
 
+
+function csvEscape(value) {
+  return `"${String(value ?? '').replaceAll('\"', '\\"')}"`;
+}
+
+export const exportAttendanceCsv = asyncHandler(async (req, res) => {
+  const query = {};
+  if (req.query.user) query.user = req.query.user;
+  if (req.query.status) query.status = req.query.status;
+  if (req.query.dateFrom || req.query.dateTo) {
+    query.date = {};
+    if (req.query.dateFrom) query.date.$gte = startOfDay(new Date(req.query.dateFrom));
+    if (req.query.dateTo) query.date.$lte = endOfDay(new Date(req.query.dateTo));
+  }
+
+  const items = await AttendanceRecord.find(query)
+    .sort({ date: -1 })
+    .limit(1000)
+    .populate('user', 'name email department designation');
+
+  const headers = ['employeeName', 'email', 'department', 'designation', 'date', 'checkIn', 'checkOut', 'status', 'source'];
+  const rows = [headers.join(',')];
+
+  items.forEach((item) => {
+    rows.push(
+      [
+        item.user?.name || '',
+        item.user?.email || '',
+        item.user?.department || '',
+        item.user?.designation || '',
+        item.date ? new Date(item.date).toISOString().slice(0, 10) : '',
+        item.checkIn ? new Date(item.checkIn).toISOString() : '',
+        item.checkOut ? new Date(item.checkOut).toISOString() : '',
+        item.status,
+        item.source
+      ]
+        .map(csvEscape)
+        .join(',')
+    );
+  });
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="attendance.csv"');
+  res.send(rows.join('\n'));
+});
+
 export const getAttendanceSummary = asyncHandler(async (req, res) => {
-  const query = ['admin', 'hr', 'manager'].includes(req.user.role) ? {} : { user: req.user._id };
+  const canManageAttendance = (await canUserPerform(req.user, 'attendance', 'approve')) || (await canUserPerform(req.user, 'attendance', 'edit'));
+  const query = canManageAttendance ? {} : { user: req.user._id };
   const items = await AttendanceRecord.find(query);
 
   res.json({

@@ -1,5 +1,6 @@
-export const ROLE_KEYS = ['admin', 'hr', 'manager', 'employee'];
-export const ACTION_KEYS = ['view', 'create', 'edit', 'delete', 'approve', 'export'];
+export const ROLE_KEYS = ['admin', 'hr', 'accounts', 'manager', 'employee'];
+export const SYSTEM_ROLE_KEYS = [...ROLE_KEYS];
+export const ACTION_KEYS = ['view', 'create', 'edit', 'delete', 'approve', 'pay', 'export'];
 
 export const MODULE_DEFINITIONS = [
   {
@@ -91,6 +92,18 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     performance: { enabled: true, showInSidebar: true, actions: ['view', 'create', 'edit', 'export'] },
     reports: { enabled: true, showInSidebar: true, actions: ['view', 'export'] },
     settings: { enabled: true, showInSidebar: true, actions: ['view', 'edit'] },
+    permissions: { enabled: false, showInSidebar: false, actions: [] }
+  },
+  accounts: {
+    dashboard: { enabled: true, showInSidebar: true, actions: ['view'] },
+    employee: { enabled: false, showInSidebar: false, actions: [] },
+    attendance: { enabled: false, showInSidebar: false, actions: [] },
+    leave: { enabled: false, showInSidebar: false, actions: [] },
+    advance: { enabled: true, showInSidebar: true, actions: ['view', 'pay', 'export'] },
+    payroll: { enabled: true, showInSidebar: true, actions: ['view', 'create', 'edit', 'approve', 'export'] },
+    performance: { enabled: false, showInSidebar: false, actions: [] },
+    reports: { enabled: true, showInSidebar: true, actions: ['view', 'export'] },
+    settings: { enabled: false, showInSidebar: false, actions: [] },
     permissions: { enabled: false, showInSidebar: false, actions: [] }
   },
   manager: {

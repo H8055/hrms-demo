@@ -1,11 +1,13 @@
 import { validationResult } from 'express-validator';
 import { AdvanceRequest } from '../models/AdvanceRequest.js';
 import { AuditLog } from '../models/AuditLog.js';
+import { CompanySettings } from '../models/CompanySettings.js';
 import { User } from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { sendMail } from '../services/mail.service.js';
 import { createNotification, createNotifications } from '../services/notification.service.js';
+import { canUserPerform, getRolesWithPermission } from '../services/permission.service.js';
 
 function validationErrorResult(req, res) {
   const errors = validationResult(req);
@@ -23,8 +25,74 @@ function getMonthRange(date = new Date()) {
   };
 }
 
-function isElevatedRole(role) {
-  return ['admin', 'hr', 'manager'].includes(role);
+function normalizeDepartmentName(value = '') {
+  return value.toString().trim().toLowerCase();
+}
+
+async function getAdvanceWorkflowConfig() {
+  const settings = await CompanySettings.findOne().select('advanceWorkflow');
+  return {
+    approvalDepartments: settings?.advanceWorkflow?.approvalDepartments || ['Human Resources'],
+    payoutDepartments: settings?.advanceWorkflow?.payoutDepartments || ['Accounts']
+  };
+}
+
+function isDepartmentAllowed(user, allowedDepartments = []) {
+  if (!allowedDepartments?.length) return true;
+  const userDept = normalizeDepartmentName(user?.department);
+  return allowedDepartments.map(normalizeDepartmentName).includes(userDept);
+}
+
+async function canApproveAdvance(user) {
+  const hasAccess = await canUserPerform(user, 'advance', 'approve');
+  if (!hasAccess) return false;
+  const workflow = await getAdvanceWorkflowConfig();
+  return isDepartmentAllowed(user, workflow.approvalDepartments);
+}
+
+async function canPayAdvance(user) {
+  const hasAccess = await canUserPerform(user, 'advance', 'pay');
+  if (!hasAccess) return false;
+  const workflow = await getAdvanceWorkflowConfig();
+  return isDepartmentAllowed(user, workflow.payoutDepartments);
+}
+
+async function canManageAdvance(user) {
+  return (await canApproveAdvance(user)) || (await canPayAdvance(user));
+}
+
+async function getUsersForAdvanceStage(action, allowedDepartments) {
+  const roles = await getRolesWithPermission('advance', action);
+  const users = await User.find({ role: { $in: roles }, isActive: true }).select('_id email name department');
+  return users.filter((user) => isDepartmentAllowed(user, allowedDepartments));
+}
+
+async function notifyPayers({ title, message, advanceId, metadata = {} }) {
+  const workflow = await getAdvanceWorkflowConfig();
+  const recipients = await getUsersForAdvanceStage('pay', workflow.payoutDepartments);
+
+  await Promise.all(
+    recipients.map((recipient) =>
+      sendMail({
+        to: recipient.email,
+        subject: title,
+        text: message
+      })
+    )
+  );
+
+  return createNotifications(
+    recipients.map((recipient) => ({
+      recipient: recipient._id,
+      type: 'advance_ready_for_payout',
+      title,
+      message,
+      link: '/advances/admin',
+      relatedEntityType: 'AdvanceRequest',
+      relatedEntityId: advanceId,
+      metadata
+    }))
+  );
 }
 
 function mapUser(user) {
@@ -89,10 +157,8 @@ async function getActivityLog(advanceId) {
 }
 
 async function notifyApprovers({ title, message, advanceId, metadata = {} }) {
-  const recipients = await User.find({
-    role: { $in: ['admin', 'hr', 'manager'] },
-    isActive: true
-  }).select('_id');
+  const workflow = await getAdvanceWorkflowConfig();
+  const recipients = await getUsersForAdvanceStage('approve', workflow.approvalDepartments);
 
   return createNotifications(
     recipients.map((recipient) => ({
@@ -116,11 +182,12 @@ export const createAdvance = asyncHandler(async (req, res) => {
 
   const duplicateThisMonth = await AdvanceRequest.findOne({
     requestedBy: req.user._id,
-    createdAt: { $gte: start, $lt: end }
+    createdAt: { $gte: start, $lt: end },
+    status: { $ne: 'paid' }
   });
 
   if (duplicateThisMonth) {
-    return res.status(409).json({ message: 'An advance request already exists for this month' });
+    return res.status(409).json({ message: 'You cannot request another advance this month unless your previous request has been paid out' });
   }
 
   const activeRequest = await AdvanceRequest.findOne({
@@ -149,9 +216,8 @@ export const createAdvance = asyncHandler(async (req, res) => {
     metadata: { amount, reason, repaymentPlan }
   });
 
-  const adminUsers = await User.find({ role: { $in: ['admin', 'hr', 'manager'] }, isActive: true }).select(
-    'email name'
-  );
+  const workflow = await getAdvanceWorkflowConfig();
+  const adminUsers = await getUsersForAdvanceStage('approve', workflow.approvalDepartments);
 
   await Promise.all(
     adminUsers.map((admin) =>
@@ -229,7 +295,7 @@ export const listAdvances = asyncHandler(async (req, res) => {
 });
 
 export const getAdvanceSummary = asyncHandler(async (req, res) => {
-  const userFilter = isElevatedRole(req.user.role) ? {} : { requestedBy: req.user._id };
+  const userFilter = (await canManageAdvance(req.user)) ? {} : { requestedBy: req.user._id };
   const { start, end } = getMonthRange();
 
   const [allItems, thisMonthItems] = await Promise.all([
@@ -268,7 +334,7 @@ export const getAdvanceById = asyncHandler(async (req, res) => {
   }
 
   const isOwner = item.requestedBy?._id?.toString() === req.user._id.toString();
-  const elevated = isElevatedRole(req.user.role);
+  const elevated = await canManageAdvance(req.user);
 
   if (!isOwner && !elevated) {
     return res.status(403).json({ message: 'Not authorised to view this request' });
@@ -288,6 +354,10 @@ export const getAdvanceById = asyncHandler(async (req, res) => {
 
 export const approveAdvance = asyncHandler(async (req, res) => {
   if (validationErrorResult(req, res)) return;
+
+  if (!(await canApproveAdvance(req.user))) {
+    return res.status(403).json({ message: 'Your department or role is not allowed to approve advance requests' });
+  }
 
   const item = await AdvanceRequest.findById(req.params.id).populate('requestedBy', 'name email');
   if (!item) {
@@ -317,6 +387,13 @@ export const approveAdvance = asyncHandler(async (req, res) => {
     to: item.requestedBy.email,
     subject: 'Advance request approved',
     text: `Your advance request for ₹${item.amount} has been approved.`
+  });
+
+  await notifyPayers({
+    title: 'Advance request approved and ready for payout',
+    message: `${item.requestedBy.name} has an approved advance request of ₹${item.amount.toLocaleString('en-IN')} awaiting payout.`,
+    advanceId: item._id,
+    metadata: { status: 'approved', requesterName: item.requestedBy.name, amount: item.amount }
   });
 
   await createNotification({
@@ -388,6 +465,10 @@ export const rejectAdvance = asyncHandler(async (req, res) => {
 
 export const payAdvance = asyncHandler(async (req, res) => {
   if (validationErrorResult(req, res)) return;
+
+  if (!(await canPayAdvance(req.user))) {
+    return res.status(403).json({ message: 'Your department or role is not allowed to process advance payouts' });
+  }
 
   const { paymentDate, paymentMode, reference } = req.body;
   const paymentDateObj = new Date(paymentDate);

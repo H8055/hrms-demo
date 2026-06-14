@@ -3,6 +3,7 @@ import { PerformanceReview } from '../models/PerformanceReview.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { createNotification } from '../services/notification.service.js';
+import { canUserPerform } from '../services/permission.service.js';
 
 function validationErrorResult(req, res) {
   const errors = validationResult(req);
@@ -79,8 +80,9 @@ export const createReview = asyncHandler(async (req, res) => {
 });
 
 export const listReviews = asyncHandler(async (req, res) => {
-  const query = ['admin', 'hr', 'manager'].includes(req.user.role) ? {} : { user: req.user._id };
-  if (req.query.user && ['admin', 'hr', 'manager'].includes(req.user.role)) query.user = req.query.user;
+  const canManagePerformance = (await canUserPerform(req.user, 'performance', 'create')) || (await canUserPerform(req.user, 'performance', 'approve')) || (await canUserPerform(req.user, 'performance', 'edit'));
+  const query = canManagePerformance ? {} : { user: req.user._id };
+  if (req.query.user && canManagePerformance) query.user = req.query.user;
 
   const items = await PerformanceReview.find(query)
     .sort({ createdAt: -1 })
@@ -91,7 +93,8 @@ export const listReviews = asyncHandler(async (req, res) => {
 });
 
 export const getPerformanceSummary = asyncHandler(async (req, res) => {
-  const query = ['admin', 'hr', 'manager'].includes(req.user.role) ? {} : { user: req.user._id };
+  const canManagePerformance = (await canUserPerform(req.user, 'performance', 'create')) || (await canUserPerform(req.user, 'performance', 'approve')) || (await canUserPerform(req.user, 'performance', 'edit'));
+  const query = canManagePerformance ? {} : { user: req.user._id };
   const items = await PerformanceReview.find(query);
   const averageRating = items.length ? items.reduce((sum, item) => sum + item.rating, 0) / items.length : 0;
 

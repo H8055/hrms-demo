@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 function buildCsv(items) {
   const headers = ['Employee', 'Email', 'Amount', 'Status', 'Requested On', 'Repayment Plan', 'Reason', 'Paid On'];
@@ -57,6 +58,9 @@ function ActivityLog({ items }) {
 }
 
 export default function AdvanceAdminPage() {
+  const { hasPermission } = useAuth();
+  const canApprove = hasPermission('advance', 'approve');
+  const canPay = hasPermission('advance', 'pay');
   const [items, setItems] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -68,6 +72,7 @@ export default function AdvanceAdminPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [approvalNote, setApprovalNote] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [paymentModes, setPaymentModes] = useState([]);
   const [paymentForm, setPaymentForm] = useState({
     paymentDate: new Date().toISOString().slice(0, 10),
     paymentMode: 'bank',
@@ -125,8 +130,31 @@ export default function AdvanceAdminPage() {
   }
 
   useEffect(() => {
+    if (!canApprove && canPay) {
+      setStatusFilter('approved');
+    }
+  }, [canApprove, canPay]);
+
+  useEffect(() => {
     loadItems();
   }, [statusFilter]);
+
+  useEffect(() => {
+    async function loadSupportData() {
+      try {
+        const { data } = await api.get('/settings/form-options');
+        const modes = data.masterData?.['payment-modes'] || [];
+        setPaymentModes(modes);
+        if (modes.length) {
+          setPaymentForm((prev) => ({ ...prev, paymentMode: prev.paymentMode || modes[0].key }));
+        }
+      } catch {
+        setPaymentModes([]);
+      }
+    }
+
+    loadSupportData();
+  }, []);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -166,7 +194,7 @@ export default function AdvanceAdminPage() {
     setMessage('');
     try {
       await api.put(`/advances/${selectedId}/approve`, { note: approvalNote });
-      setMessage('Request approved successfully. Employee notification has been created.');
+      setMessage('Request approved successfully. It is now available in the payout queue for roles with payout access.');
       await refreshCurrentState();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to approve request');
@@ -192,7 +220,7 @@ export default function AdvanceAdminPage() {
     setMessage('');
     try {
       await api.put(`/advances/${selectedId}/pay`, paymentForm);
-      setMessage('Payment recorded successfully and history log updated.');
+      setMessage('Payment recorded successfully by payout queue role and history log updated.');
       await refreshCurrentState();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to mark request as paid');
@@ -201,19 +229,20 @@ export default function AdvanceAdminPage() {
 
   return (
     <AppLayout
-      title="Advance Admin"
-      description="Reviewed with your diagram: admin alert, request review, decision, payment processing, and employee-visible history log."
+      eyebrow="Advance approval & payout"
+      title="Advance Workflow"
+      description="Separated workflow: approval can be handled by HR/approvers, while payout can be handled by Accounts or any role with advance.pay permission."
     >
       <section className="stats-grid compact-grid">
         <div className="stat-card">
-          <p>Pending</p>
+          <p>Pending approval</p>
           <h3>{summary.pending}</h3>
-          <small>Needs decision</small>
+          <small>Approval queue</small>
         </div>
         <div className="stat-card">
-          <p>Approved</p>
+          <p>Approved awaiting payout</p>
           <h3>{summary.approved}</h3>
-          <small>Ready for payment</small>
+          <small>Payout queue</small>
         </div>
         <div className="stat-card">
           <p>Paid</p>
@@ -227,8 +256,30 @@ export default function AdvanceAdminPage() {
         </div>
       </section>
 
-      <section className="split-layout">
-        <article className="card">
+      {error ? <div className="alert alert-error">{error}</div> : null}
+      {message ? <div className="alert alert-success">{message}</div> : null}
+
+      <section className="two-column-layout">
+        <article className="card card-elevated">
+          <div className="section-header wrap-on-mobile">
+            <div>
+              <h3>Workflow responsibilities</h3>
+              <p>Use permissions to split who approves vs who pays out.</p>
+            </div>
+          </div>
+          <div className="feature-grid compact">
+            <div className="feature-card">
+              <strong>Approval access</strong>
+              <span>{canApprove ? 'You can approve or reject pending requests.' : 'This role does not currently have approval access.'}</span>
+            </div>
+            <div className="feature-card">
+              <strong>Payout access</strong>
+              <span>{canPay ? 'You can process approved requests and mark them paid.' : 'This role does not currently have payout access.'}</span>
+            </div>
+          </div>
+        </article>
+
+        <article className="card card-elevated">
           <div className="section-header wrap-on-mobile">
             <div>
               <h3>Request queue</h3>
@@ -250,10 +301,10 @@ export default function AdvanceAdminPage() {
                 All
               </button>
               <button className={`chip-button ${statusFilter === 'pending' ? 'active' : ''}`} type="button" onClick={() => setStatusFilter('pending')}>
-                Pending
+                Pending approval
               </button>
               <button className={`chip-button ${statusFilter === 'approved' ? 'active' : ''}`} type="button" onClick={() => setStatusFilter('approved')}>
-                Approved
+                Awaiting payout
               </button>
               <button className={`chip-button ${statusFilter === 'paid' ? 'active' : ''}`} type="button" onClick={() => setStatusFilter('paid')}>
                 Paid
@@ -264,8 +315,6 @@ export default function AdvanceAdminPage() {
             </div>
           </div>
 
-          {error ? <div className="alert alert-error">{error}</div> : null}
-          {message ? <div className="alert alert-success">{message}</div> : null}
           {loading ? <div className="empty-state">Loading requests...</div> : null}
 
           {!loading && filteredItems.length === 0 ? (
@@ -302,12 +351,14 @@ export default function AdvanceAdminPage() {
             </div>
           )}
         </article>
+      </section>
 
-        <article className="card detail-card">
+      <section className="single-column-layout">
+        <article className="card detail-card card-elevated">
           <div className="section-header">
             <div>
               <h3>Review & action</h3>
-              <p>Amount, reason, history, decision, payment, and log.</p>
+              <p>Approval and payout are now separated so different departments or roles can own different workflow stages.</p>
             </div>
           </div>
 
@@ -381,10 +432,10 @@ export default function AdvanceAdminPage() {
                 </div>
               </div>
 
-              {detail.advance.status === 'pending' ? (
+              {detail.advance.status === 'pending' && canApprove ? (
                 <div className="detail-section action-panel-grid">
                   <div className="sub-card">
-                    <h4>Approve request</h4>
+                    <h4>Approval queue</h4>
                     <label className="field">
                       <span>Approval note (optional)</span>
                       <textarea
@@ -417,9 +468,10 @@ export default function AdvanceAdminPage() {
                 </div>
               ) : null}
 
-              {detail.advance.status === 'approved' ? (
+              {detail.advance.status === 'approved' && canPay ? (
                 <div className="detail-section sub-card">
-                  <h4>Process payment</h4>
+                  <h4>Payout queue</h4>
+                  <p className="helper-text">This request has already been approved and is waiting for payout processing.</p>
                   <div className="form-grid">
                     <label className="field">
                       <span>Payment date</span>
@@ -440,9 +492,9 @@ export default function AdvanceAdminPage() {
                           setPaymentForm((prev) => ({ ...prev, paymentMode: event.target.value }))
                         }
                       >
-                        <option value="bank">Bank</option>
-                        <option value="cash">Cash</option>
-                        <option value="upi">UPI</option>
+                        {(paymentModes.length ? paymentModes : [{ key: 'bank', label: 'Bank' }, { key: 'cash', label: 'Cash' }, { key: 'upi', label: 'UPI' }]).map((mode) => (
+                          <option key={mode.id || mode.key} value={mode.key}>{mode.label}</option>
+                        ))}
                       </select>
                     </label>
                   </div>
@@ -461,6 +513,10 @@ export default function AdvanceAdminPage() {
                     Mark as paid
                   </button>
                 </div>
+              ) : null}
+
+              {detail.advance.status === 'approved' && !canPay ? (
+                <div className="empty-state">This request has been approved and is waiting for payout by a role or department with advance payout access.</div>
               ) : null}
 
               <div className="detail-section">

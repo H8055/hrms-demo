@@ -80,7 +80,7 @@ export default function App() {
       <Route
         path="/advances/admin"
         element={
-          <ProtectedRoute permission={{ module: 'advance', action: 'approve' }}>
+          <ProtectedRoute anyPermissions={[{ module: 'advance', action: 'approve' }, { module: 'advance', action: 'pay' }]}>
             <AdvanceAdminPage />
           </ProtectedRoute>
         }

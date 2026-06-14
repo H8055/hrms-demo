@@ -3,22 +3,34 @@ import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
-const initialForm = {
-  leaveType: 'annual',
-  fromDate: new Date().toISOString().slice(0, 10),
-  toDate: new Date().toISOString().slice(0, 10),
-  reason: ''
-};
-
 export default function LeavePage() {
   const { hasPermission } = useAuth();
   const canApprove = hasPermission('leave', 'approve');
-  const [form, setForm] = useState(initialForm);
+  const [supportData, setSupportData] = useState({ masterData: {} });
+  const [form, setForm] = useState({
+    leaveType: 'annual',
+    fromDate: new Date().toISOString().slice(0, 10),
+    toDate: new Date().toISOString().slice(0, 10),
+    reason: ''
+  });
   const [summary, setSummary] = useState(null);
   const [myItems, setMyItems] = useState([]);
   const [adminItems, setAdminItems] = useState([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  async function loadSupportData() {
+    try {
+      const { data } = await api.get('/settings/form-options');
+      setSupportData({ masterData: data.masterData || {} });
+      const leaveTypes = data.masterData?.['leave-types'] || [];
+      if (leaveTypes.length) {
+        setForm((prev) => ({ ...prev, leaveType: prev.leaveType || leaveTypes[0].key }));
+      }
+    } catch {
+      setSupportData({ masterData: {} });
+    }
+  }
 
   async function loadData() {
     try {
@@ -34,10 +46,13 @@ export default function LeavePage() {
   }
 
   useEffect(() => {
+    loadSupportData();
     loadData();
   }, [canApprove]);
 
   const pendingLeaves = useMemo(() => adminItems.filter((item) => item.status === 'pending'), [adminItems]);
+  const leaveTypes = supportData.masterData['leave-types'] || [];
+  const balanceEntries = Object.entries(summary?.balances || {});
 
   async function submitLeave(event) {
     event.preventDefault();
@@ -45,7 +60,12 @@ export default function LeavePage() {
       await api.post('/leaves', form);
       setMessage('Leave request submitted.');
       setError('');
-      setForm(initialForm);
+      setForm({
+        leaveType: leaveTypes[0]?.key || 'annual',
+        fromDate: new Date().toISOString().slice(0, 10),
+        toDate: new Date().toISOString().slice(0, 10),
+        reason: ''
+      });
       loadData();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit leave request');
@@ -65,12 +85,12 @@ export default function LeavePage() {
   }
 
   return (
-    <AppLayout title="Leave Management" description="Sprint 4 MVP: leave application, approval flow, balances, and history.">
+    <AppLayout title="Leave Management" description="Dynamic leave types, balances, application flow, and approvals.">
       <section className="stats-grid compact-grid">
-        <div className="stat-card"><p>Annual balance</p><h3>{summary?.balances?.annual ?? 0}</h3><small>Remaining annual leaves</small></div>
-        <div className="stat-card"><p>Sick balance</p><h3>{summary?.balances?.sick ?? 0}</h3><small>Remaining sick leaves</small></div>
+        {balanceEntries.slice(0, 3).map(([key, value]) => (
+          <div className="stat-card" key={key}><p>{key}</p><h3>{value}</h3><small>Available balance</small></div>
+        ))}
         <div className="stat-card"><p>Pending</p><h3>{summary?.pending ?? 0}</h3><small>Awaiting approval</small></div>
-        <div className="stat-card"><p>Approved days</p><h3>{summary?.totalDaysApproved ?? 0}</h3><small>Total approved leave days</small></div>
       </section>
 
       {error ? <div className="alert alert-error">{error}</div> : null}
@@ -86,7 +106,7 @@ export default function LeavePage() {
           </div>
           <form className="detail-stack" onSubmit={submitLeave}>
             <div className="detail-grid">
-              <label className="field"><span>Leave type</span><select value={form.leaveType} onChange={(e) => setForm({ ...form, leaveType: e.target.value })}><option value="annual">Annual</option><option value="sick">Sick</option><option value="casual">Casual</option><option value="unpaid">Unpaid</option></select></label>
+              <label className="field"><span>Leave type</span><select value={form.leaveType} onChange={(e) => setForm({ ...form, leaveType: e.target.value })}>{leaveTypes.map((item) => <option key={item.id} value={item.key}>{item.label}</option>)}</select></label>
               <label className="field"><span>From date</span><input type="date" value={form.fromDate} onChange={(e) => setForm({ ...form, fromDate: e.target.value })} required /></label>
               <label className="field"><span>To date</span><input type="date" value={form.toDate} onChange={(e) => setForm({ ...form, toDate: e.target.value })} required /></label>
             </div>

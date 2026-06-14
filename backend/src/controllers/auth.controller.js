@@ -11,6 +11,7 @@ import {
 } from '../utils/tokens.js';
 import { sendMail } from '../services/mail.service.js';
 import { getEffectivePermissionsForUser } from '../services/permission.service.js';
+import { getDefaultRoleKey, roleExists } from '../services/role.service.js';
 
 function validationErrorResult(req, res) {
   const errors = validationResult(req);
@@ -57,7 +58,12 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const assignedRole = usersCount === 0 ? 'admin' : role || 'employee';
+  const fallbackRole = await getDefaultRoleKey();
+  const assignedRole = usersCount === 0 ? 'admin' : (role || fallbackRole);
+
+  if (!(await roleExists(assignedRole))) {
+    return res.status(400).json({ message: 'Selected role does not exist or is inactive' });
+  }
 
   const user = await User.create({
     name,

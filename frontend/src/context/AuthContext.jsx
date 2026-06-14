@@ -76,6 +76,12 @@ export function AuthProvider({ children }) {
         const { data } = await api.get('/auth/me');
         setUser(data.user);
         return data.user;
+      },
+      canApproveAdvance() {
+        return hasPermission('advance', 'approve');
+      },
+      canPayAdvance() {
+        return hasPermission('advance', 'pay');
       }
     };
   }, [user, loading]);

@@ -6,6 +6,7 @@ import { User } from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { createNotification } from '../services/notification.service.js';
+import { canUserPerform } from '../services/permission.service.js';
 
 function validationErrorResult(req, res) {
   const errors = validationResult(req);
@@ -172,9 +173,10 @@ export const runPayroll = asyncHandler(async (req, res) => {
 });
 
 export const listPayrolls = asyncHandler(async (req, res) => {
-  const query = ['admin', 'hr', 'manager'].includes(req.user.role) ? {} : { user: req.user._id };
+  const canManagePayroll = (await canUserPerform(req.user, 'payroll', 'create')) || (await canUserPerform(req.user, 'payroll', 'approve')) || (await canUserPerform(req.user, 'payroll', 'edit'));
+  const query = canManagePayroll ? {} : { user: req.user._id };
   if (req.query.month) query.month = req.query.month;
-  if (req.query.user && ['admin', 'hr', 'manager'].includes(req.user.role)) query.user = req.query.user;
+  if (req.query.user && canManagePayroll) query.user = req.query.user;
 
   const items = await PayrollRecord.find(query)
     .sort({ month: -1, createdAt: -1 })
@@ -220,7 +222,8 @@ export const markPayrollPaid = asyncHandler(async (req, res) => {
 });
 
 export const getPayrollSummary = asyncHandler(async (req, res) => {
-  const query = ['admin', 'hr', 'manager'].includes(req.user.role) ? {} : { user: req.user._id };
+  const canManagePayroll = (await canUserPerform(req.user, 'payroll', 'create')) || (await canUserPerform(req.user, 'payroll', 'approve')) || (await canUserPerform(req.user, 'payroll', 'edit'));
+  const query = canManagePayroll ? {} : { user: req.user._id };
   const items = await PayrollRecord.find(query);
 
   res.json({

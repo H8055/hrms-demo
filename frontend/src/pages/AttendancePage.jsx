@@ -3,15 +3,28 @@ import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+
 export default function AttendancePage() {
   const { hasPermission } = useAuth();
   const canApprove = hasPermission('attendance', 'approve');
+  const canExport = hasPermission('attendance', 'export');
   const [summary, setSummary] = useState(null);
+  const [supportData, setSupportData] = useState({ masterData: {} });
   const [myItems, setMyItems] = useState([]);
   const [adminItems, setAdminItems] = useState([]);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), reason: '', requestedCheckIn: '', requestedCheckOut: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  async function loadSupportData() {
+    try {
+      const { data } = await api.get('/settings/form-options');
+      setSupportData({ masterData: data.masterData || {} });
+    } catch {
+      setSupportData({ masterData: {} });
+    }
+  }
 
   async function loadData() {
     try {
@@ -27,6 +40,7 @@ export default function AttendancePage() {
   }
 
   useEffect(() => {
+    loadSupportData();
     loadData();
   }, [canApprove]);
 
@@ -34,6 +48,9 @@ export default function AttendancePage() {
     () => adminItems.filter((item) => item.status === 'regularization-pending' || item.regularization?.status === 'pending'),
     [adminItems]
   );
+
+  const shifts = supportData.masterData.shifts || [];
+  const holidays = supportData.masterData.holidays || [];
 
   async function doCheckIn() {
     try {
@@ -82,8 +99,12 @@ export default function AttendancePage() {
     }
   }
 
+  function exportCsv() {
+    window.open(`${apiOrigin}/api/attendance/export/csv`, '_blank', 'noopener,noreferrer');
+  }
+
   return (
-    <AppLayout title="Attendance" description="Sprint 3 MVP: check-in/out, history, summaries, and regularization flow.">
+    <AppLayout title="Attendance" description="Sprint 3 implementation with check-in/out, regularization, configured shifts, holidays, and CSV export.">
       <section className="stats-grid compact-grid">
         <div className="stat-card"><p>Present</p><h3>{summary?.present ?? 0}</h3><small>Recorded attendance days</small></div>
         <div className="stat-card"><p>On leave</p><h3>{summary?.onLeave ?? 0}</h3><small>Approved leave days</small></div>
@@ -102,6 +123,7 @@ export default function AttendancePage() {
               <p>Check-in/out and raise regularization requests.</p>
             </div>
             <div className="action-row compact-wrap">
+              {canExport ? <button className="secondary-button small" type="button" onClick={exportCsv}>Export CSV</button> : null}
               <button className="primary-button small" type="button" onClick={doCheckIn}>Check in</button>
               <button className="secondary-button small" type="button" onClick={doCheckOut}>Check out</button>
             </div>
@@ -116,6 +138,36 @@ export default function AttendancePage() {
             <label className="field"><span>Reason</span><textarea rows="3" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} required /></label>
             <button className="primary-button" type="submit">Submit regularization</button>
           </form>
+
+          <div className="detail-section">
+            <h4>Configured shifts</h4>
+            <div className="mini-history-list">
+              {shifts.length === 0 ? <div className="empty-state">No shifts configured yet.</div> : shifts.map((shift) => (
+                <div className="mini-history-item" key={shift.id}>
+                  <div>
+                    <strong>{shift.label}</strong>
+                    <p>{shift.description || 'Configured from settings master data'}</p>
+                  </div>
+                  <span>{shift.metadata?.startTime || '—'} to {shift.metadata?.endTime || '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="detail-section">
+            <h4>Upcoming holidays</h4>
+            <div className="mini-history-list">
+              {holidays.length === 0 ? <div className="empty-state">No holidays configured yet.</div> : holidays.slice(0, 8).map((holiday) => (
+                <div className="mini-history-item" key={holiday.id}>
+                  <div>
+                    <strong>{holiday.label}</strong>
+                    <p>{holiday.description || 'Holiday master from settings'}</p>
+                  </div>
+                  <span>{holiday.metadata?.date || 'Date not set'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="detail-section">
             <h4>My recent records</h4>

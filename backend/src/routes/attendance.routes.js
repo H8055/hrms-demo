@@ -4,6 +4,7 @@ import {
   checkIn,
   checkOut,
   decideRegularization,
+  exportAttendanceCsv,
   getAttendanceSummary,
   listAttendance,
   listMyAttendance,
@@ -16,6 +17,7 @@ const router = Router();
 router.use(authenticate);
 router.get('/mine', checkPermission('attendance', 'view'), listMyAttendance);
 router.get('/summary', checkPermission('attendance', 'view'), getAttendanceSummary);
+router.get('/export/csv', checkPermission('attendance', 'export'), exportAttendanceCsv);
 router.post('/check-in', checkPermission('attendance', 'create'), checkIn);
 router.post('/check-out', checkPermission('attendance', 'create'), checkOut);
 router.post(

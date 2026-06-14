@@ -4,6 +4,8 @@ import { AdvanceRequest } from './models/AdvanceRequest.js';
 import { AttendanceRecord } from './models/AttendanceRecord.js';
 import { AuditLog } from './models/AuditLog.js';
 import { CompanySettings } from './models/CompanySettings.js';
+import { MasterDataItem } from './models/MasterDataItem.js';
+import { Role } from './models/Role.js';
 import { LeaveRequest } from './models/LeaveRequest.js';
 import { Notification } from './models/Notification.js';
 import { PayrollRecord } from './models/PayrollRecord.js';
@@ -12,6 +14,8 @@ import { SalaryStructure } from './models/SalaryStructure.js';
 import { RolePermission } from './models/RolePermission.js';
 import { User } from './models/User.js';
 import { seedDefaultRolePermissions } from './services/permission.service.js';
+import { seedDefaultRoles } from './services/role.service.js';
+import { seedDefaultMasterData } from './services/master-data.service.js';
 
 async function createUser(payload) {
   const passwordHash = await bcrypt.hash('Password@123', 10);
@@ -26,14 +30,19 @@ async function seed() {
     AttendanceRecord.deleteMany({}),
     AuditLog.deleteMany({}),
     CompanySettings.deleteMany({}),
+    MasterDataItem.deleteMany({}),
     LeaveRequest.deleteMany({}),
     Notification.deleteMany({}),
     PayrollRecord.deleteMany({}),
     PerformanceReview.deleteMany({}),
     SalaryStructure.deleteMany({}),
     RolePermission.deleteMany({}),
+    Role.deleteMany({}),
     User.deleteMany({})
   ]);
+
+  await seedDefaultRoles();
+  await seedDefaultMasterData();
 
   const admin = await createUser({
     name: 'Super Admin',
@@ -60,6 +69,16 @@ async function seed() {
     department: 'Engineering',
     designation: 'Line Manager',
     employeeCode: 'MGR-001'
+  });
+
+
+  const accounts = await createUser({
+    name: 'Ayesha Accounts',
+    email: 'accounts@example.com',
+    role: 'accounts',
+    department: 'Accounts',
+    designation: 'Accounts Executive',
+    employeeCode: 'ACC-001'
   });
 
   const employee = await createUser({
@@ -89,7 +108,11 @@ async function seed() {
     companyEmail: 'info@example.com',
     companyPhone: '+91 90000 00000',
     address: 'Bengaluru, India',
-    holidays: ['2026-01-26', '2026-08-15', '2026-10-02']
+    holidays: ['2026-01-26', '2026-08-15', '2026-10-02'],
+    advanceWorkflow: {
+      approvalDepartments: ['Human Resources'],
+      payoutDepartments: ['Accounts']
+    }
   });
 
   await SalaryStructure.insertMany([
@@ -164,6 +187,7 @@ async function seed() {
   console.log('admin@example.com / Password@123');
   console.log('hr@example.com / Password@123');
   console.log('manager@example.com / Password@123');
+  console.log('accounts@example.com / Password@123');
   console.log('employee@example.com / Password@123');
   process.exit(0);
 }

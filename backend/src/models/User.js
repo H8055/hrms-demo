@@ -20,7 +20,9 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'hr', 'manager', 'employee'],
+      required: true,
+      trim: true,
+      lowercase: true,
       default: 'employee'
     },
     department: {
@@ -59,7 +61,7 @@ const userSchema = new mongoose.Schema(
     },
     employmentStatus: {
       type: String,
-      enum: ['active', 'onboarded', 'exited'],
+      trim: true,
       default: 'active'
     },
     emergencyContactName: {
@@ -73,9 +75,12 @@ const userSchema = new mongoose.Schema(
       default: ''
     },
     leaveBalances: {
-      annual: { type: Number, default: 18 },
-      sick: { type: Number, default: 8 },
-      casual: { type: Number, default: 6 }
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        annual: 18,
+        sick: 8,
+        casual: 6
+      }
     },
     bankDetails: {
       accountName: { type: String, default: '' },

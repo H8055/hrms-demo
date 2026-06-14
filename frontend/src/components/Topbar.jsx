@@ -10,7 +10,7 @@ export default function Topbar({ onMenuClick }) {
         ☰
       </button>
 
-      <div>
+      <div className="topbar-copy">
         <h1>Welcome back</h1>
         <p>
           {user?.name} · {user?.role}

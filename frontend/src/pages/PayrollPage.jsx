@@ -50,6 +50,11 @@ export default function PayrollPage() {
     [payrolls, canManage, user.id]
   );
 
+  const totalGross = useMemo(
+    () => myLatestPayrolls.reduce((sum, item) => sum + (item.grossPay || 0), 0),
+    [myLatestPayrolls]
+  );
+
   async function saveStructure(event) {
     event.preventDefault();
     try {
@@ -86,7 +91,11 @@ export default function PayrollPage() {
   }
 
   return (
-    <AppLayout title="Payroll" description="Sprint 5-6 MVP: salary structure, payroll run, payslips, and advance deduction linkage.">
+    <AppLayout
+      eyebrow="Payroll operations"
+      title="Payroll"
+      description="Production-focused payroll surface with clear actions, salary structures, monthly run controls, and employee payout visibility."
+    >
       <section className="stats-grid compact-grid">
         <div className="stat-card"><p>Total payrolls</p><h3>{summary?.totalPayrolls ?? 0}</h3><small>Generated payslips</small></div>
         <div className="stat-card"><p>Paid</p><h3>{summary?.paidCount ?? 0}</h3><small>Marked as paid</small></div>
@@ -97,8 +106,47 @@ export default function PayrollPage() {
       {error ? <div className="alert alert-error">{error}</div> : null}
       {message ? <div className="alert alert-success">{message}</div> : null}
 
+      <section className="two-column-layout">
+        <article className="card card-elevated">
+          <div className="section-header">
+            <div>
+              <h3>{canManage ? 'Payroll control center' : 'My payroll summary'}</h3>
+              <p>
+                {canManage
+                  ? 'Configure salary structures, run a cycle, and review generated payroll records.'
+                  : 'Review the latest visible payroll totals and paid status.'}
+              </p>
+            </div>
+          </div>
+          <div className="feature-grid compact">
+            <div className="feature-card">
+              <strong>Visible payroll records</strong>
+              <span>{myLatestPayrolls.length} records currently loaded for this view.</span>
+            </div>
+            <div className="feature-card">
+              <strong>Total gross in view</strong>
+              <span>₹{totalGross.toLocaleString('en-IN')} combined gross pay across listed records.</span>
+            </div>
+          </div>
+        </article>
+
+        <article className="card card-elevated">
+          <div className="section-header">
+            <div>
+              <h3>Operator notes</h3>
+              <p>Use this area as a quick pre-run checklist for payroll handling.</p>
+            </div>
+          </div>
+          <div className="list-stack">
+            <div className="mini-history-item"><div><strong>Check structures</strong><p>Ensure employees have updated salary structures before the payroll run.</p></div><span className="status-chip approved">ready</span></div>
+            <div className="mini-history-item"><div><strong>Verify deductions</strong><p>Advance deductions and payroll totals should be reviewed before marking paid.</p></div><span className="status-chip pending">review</span></div>
+            <div className="mini-history-item"><div><strong>Communicate release</strong><p>Employees should be notified once payroll records are paid and visible.</p></div><span className="status-chip approved">tracked</span></div>
+          </div>
+        </article>
+      </section>
+
       <section className="split-layout">
-        <article className="card">
+        <article className="card detail-card card-elevated">
           <div className="section-header">
             <div>
               <h3>{canManage ? 'Payroll controls' : 'My payslips'}</h3>
@@ -123,7 +171,7 @@ export default function PayrollPage() {
 
               <div className="sub-card">
                 <h4>Run monthly payroll</h4>
-                <div className="action-row">
+                <div className="action-row compact-wrap">
                   <input type="month" value={runMonth} onChange={(e) => setRunMonth(e.target.value)} />
                   <button className="secondary-button" type="button" onClick={runPayroll}>Run payroll</button>
                 </div>
@@ -135,6 +183,7 @@ export default function PayrollPage() {
                   {structures.slice(0, 12).map((item) => (
                     <div className="mini-history-item" key={item.id}><div><strong>{item.user?.name}</strong><p>Gross: ₹{(item.basic + item.hra + item.allowances).toLocaleString('en-IN')}</p></div><span>₹{(item.statutoryDeductions + item.otherDeductions).toLocaleString('en-IN')} deductions</span></div>
                   ))}
+                  {structures.length === 0 ? <div className="empty-state">No salary structures configured yet.</div> : null}
                 </div>
               </div>
             </div>
@@ -143,7 +192,7 @@ export default function PayrollPage() {
           )}
         </article>
 
-        <article className="card detail-card">
+        <article className="card detail-card card-elevated">
           <div className="section-header">
             <div>
               <h3>{canManage ? 'Payroll records' : 'Recent payslips'}</h3>

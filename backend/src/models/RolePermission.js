@@ -1,12 +1,13 @@
 import mongoose from 'mongoose';
-import { ACTION_KEYS, MODULE_KEYS, ROLE_KEYS } from '../config/permissions.js';
+import { ACTION_KEYS, MODULE_KEYS } from '../config/permissions.js';
 
 const rolePermissionSchema = new mongoose.Schema(
   {
     role: {
       type: String,
-      enum: ROLE_KEYS,
       required: true,
+      trim: true,
+      lowercase: true,
       index: true
     },
     module: {
