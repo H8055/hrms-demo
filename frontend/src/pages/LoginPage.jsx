@@ -48,7 +48,7 @@ export default function LoginPage() {
       <section className="auth-panel auth-panel-primary">
         <div className="auth-copy">
           <span className="eyebrow">MERN • mobile-first • responsive</span>
-          <h1>HRMS for teams that need desktop power and mobile simplicity.</h1>
+          <h1>MS HRMS for teams that need desktop power and mobile simplicity.</h1>
           <p>
             This starter includes secure authentication, a responsive dashboard shell, and the
             Advance Request workflow from your sprint plan.

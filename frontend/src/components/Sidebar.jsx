@@ -32,10 +32,9 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className={`sidebar-backdrop ${isOpen ? 'show' : ''}`} onClick={onClose} />
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <div className="brand-mark">HR</div>
+          <img src="/mslogo.png" alt="MS HRMS Logo" className="brand-mark" />
           <div>
-            <strong>HRMS</strong>
-            <p>Responsive Portal</p>
+            <strong>MS HRMS</strong>
           </div>
         </div>
 
