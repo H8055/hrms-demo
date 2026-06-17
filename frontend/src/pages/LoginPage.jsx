@@ -1,12 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 
+function EyeIcon({ open }) {
+  if (open) {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [successMessage] = useState(location.state?.message || '');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [bootstrap, setBootstrap] = useState({ loading: true, requiresSetup: false, apiReachable: true });
@@ -47,17 +67,9 @@ export default function LoginPage() {
     <div className="auth-screen">
       <section className="auth-panel auth-panel-primary">
         <div className="auth-copy">
-          <span className="eyebrow">MERN • mobile-first • responsive</span>
-          <h1>HRMS for teams that need desktop power and mobile simplicity.</h1>
-          <p>
-            This starter includes secure authentication, a responsive dashboard shell, and the
-            Advance Request workflow from your sprint plan.
-          </p>
-          <div className="feature-grid compact">
-            <div className="feature-card"><strong>375px</strong><span>Phone-ready forms</span></div>
-            <div className="feature-card"><strong>768px</strong><span>Tablet-friendly layout</span></div>
-            <div className="feature-card"><strong>1280px</strong><span>Desktop data density</span></div>
-          </div>
+          <span className="eyebrow">MS HRMS</span>
+          <h1>Human Resource Management System</h1>
+          <p>Manage your workforce efficiently — from attendance and leave to payroll and advance requests, all in one place.</p>
         </div>
       </section>
 
@@ -80,12 +92,7 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          {!bootstrap.loading && bootstrap.apiReachable && !bootstrap.requiresSetup ? (
-            <div className="alert alert-success">
-              If you used seed data, try <strong>admin@example.com</strong> / <strong>Password@123</strong>.
-            </div>
-          ) : null}
-
+          {successMessage ? <div className="alert alert-success">{successMessage}</div> : null}
           {error ? <div className="alert alert-error">{error}</div> : null}
 
           <label className="field">
@@ -94,20 +101,32 @@ export default function LoginPage() {
               type="email"
               value={form.email}
               onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="admin@example.com"
+              placeholder="Enter your email"
               required
             />
           </label>
 
           <label className="field">
             <span>Password</span>
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-              placeholder="Password@123"
-              required
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="password-eye-btn"
+                onClick={() => setShowPassword((s) => !s)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
           </label>
 
           <button className="primary-button" type="submit" disabled={submitting || bootstrap.requiresSetup}>
@@ -116,13 +135,7 @@ export default function LoginPage() {
 
           <div className="auth-links">
             <Link to="/forgot-password">Forgot password?</Link>
-            <span>•</span>
-            <Link to="/reset-password">Have a token?</Link>
-            <span>•</span>
-            <Link to="/setup-admin">Setup admin</Link>
           </div>
-
-          <p className="helper-text">If login fails, it usually means the first admin has not been created yet or demo data was not seeded.</p>
         </form>
       </section>
     </div>

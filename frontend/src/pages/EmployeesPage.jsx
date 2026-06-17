@@ -35,6 +35,7 @@ export default function EmployeesPage() {
   const [form, setForm] = useState(initialForm);
   const [importText, setImportText] = useState(initialImport);
   const [documentForm, setDocumentForm] = useState({ category: '', file: null });
+  const [emailChangeValue, setEmailChangeValue] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const canViewDirectory = user.role !== 'employee';
@@ -107,8 +108,22 @@ export default function EmployeesPage() {
     }
   }, [selectedId]);
 
+  async function changeEmail(event) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    try {
+      await api.put(`/employees/${selectedId}/email`, { email: emailChangeValue });
+      setMessage('Email updated successfully.');
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update email');
+    }
+  }
+
   function selectEmployee(employee) {
     setSelectedId(employee.id);
+    setEmailChangeValue(employee.email || '');
     setForm({
       name: employee.name || '',
       email: employee.email || '',
@@ -355,6 +370,29 @@ export default function EmployeesPage() {
           ) : (
             <div className="empty-state">You can review employee details here. Create/edit controls appear only when your role permission allows them.</div>
           )}
+
+          {selectedId && user.role === 'admin' ? (
+            <div className="detail-section">
+              <h4>Change Email Address</h4>
+              <p className="muted-label" style={{ marginBottom: '0.75rem' }}>Admin-only. The employee will need to log in with the new email.</p>
+              <form className="detail-stack" onSubmit={changeEmail}>
+                <div className="detail-grid">
+                  <label className="field">
+                    <span>New email address</span>
+                    <input
+                      type="email"
+                      value={emailChangeValue}
+                      onChange={(e) => setEmailChangeValue(e.target.value)}
+                      required
+                    />
+                  </label>
+                </div>
+                <div className="action-row">
+                  <button className="secondary-button" type="submit">Update Email</button>
+                </div>
+              </form>
+            </div>
+          ) : null}
 
           {selectedId ? (
             <div className="detail-section">

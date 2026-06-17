@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { body, query } from 'express-validator';
 import {
+  changeEmployeeEmail,
   createEmployee,
   deactivateEmployee,
   deleteEmployeeDocument,
@@ -15,13 +16,13 @@ import {
   updateEmployee,
   uploadEmployeeDocument
 } from '../controllers/employee.controller.js';
-import { authenticate, checkPermission } from '../middleware/auth.js';
+import { authenticate, authorize, checkPermission } from '../middleware/auth.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 router.use(authenticate);
-router.get('/me', checkPermission('employee', 'view'), getMyEmployeeProfile);
+router.get('/me', getMyEmployeeProfile); // own profile — no module permission needed, just auth
 router.get('/org-chart', checkPermission('employee', 'view'), getOrgChart);
 router.get('/export/csv', checkPermission('employee', 'export'), exportEmployeesCsv);
 router.post('/import-csv', checkPermission('employee', 'create'), [body('csvText').isString().withMessage('csvText is required')], importEmployeesCsv);
@@ -47,6 +48,7 @@ router.post(
   createEmployee
 );
 router.put('/:id', checkPermission('employee', 'edit'), updateEmployee);
+router.put('/:id/email', authorize('admin'), changeEmployeeEmail);
 router.put('/:id/deactivate', checkPermission('employee', 'delete'), deactivateEmployee);
 
 export default router;

@@ -4,6 +4,7 @@ import { body } from 'express-validator';
 import { env } from '../config/env.js';
 import {
   bootstrapStatus,
+  changePassword,
   forgotPassword,
   login,
   logout,
@@ -59,6 +60,15 @@ router.post(
   login
 );
 
+router.post(
+  '/change-password',
+  authenticate,
+  [
+    body('oldPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters')
+  ],
+  changePassword
+);
 router.get('/bootstrap-status', bootstrapStatus);
 router.post('/refresh', refresh);
 router.post('/logout', logout);

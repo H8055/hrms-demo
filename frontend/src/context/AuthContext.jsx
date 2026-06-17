@@ -16,11 +16,17 @@ export function AuthProvider({ children }) {
           const { data } = await api.get('/auth/me');
           setUser(data.user);
         } else {
-          const { data } = await api.post('/auth/refresh');
-          localStorage.setItem('hrms_access_token', data.accessToken);
-          setUser(data.user);
+          // Silently attempt to restore session via httpOnly refresh cookie.
+          // A 401 here just means no prior session exists — not an error.
+          try {
+            const { data } = await api.post('/auth/refresh');
+            localStorage.setItem('hrms_access_token', data.accessToken);
+            setUser(data.user);
+          } catch {
+            // No active session — proceed to login page.
+          }
         }
-      } catch (error) {
+      } catch {
         localStorage.removeItem('hrms_access_token');
       } finally {
         setLoading(false);

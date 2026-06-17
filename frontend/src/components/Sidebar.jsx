@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const links = [
@@ -64,6 +64,9 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="sidebar-footer">
           <span className={`role-badge role-${user?.role}`}>{user?.role}</span>
           <small>{user?.email}</small>
+          <Link to="/change-password" onClick={onClose} className="sidebar-footer-link">
+            Change Password
+          </Link>
         </div>
       </aside>
     </>

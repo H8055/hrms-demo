@@ -145,7 +145,17 @@ function buildImportRecords(csvText) {
   });
 }
 
+const DIRECTORY_ROLES = ['admin', 'hr', 'manager'];
+
 export const listEmployees = asyncHandler(async (req, res) => {
+  if (!DIRECTORY_ROLES.includes(req.user.role)) {
+    // Non-privileged users can only see their own record
+    const self = await User.findById(req.user._id)
+      .select('-passwordHash -refreshToken -resetTokenHash -resetTokenExpiresAt')
+      .populate('manager', 'name email designation');
+    return res.json({ items: self ? [mapEmployee(self)] : [] });
+  }
+
   const query = {};
   const searchQuery = buildSearchQuery(req.query.q);
   if (searchQuery) Object.assign(query, searchQuery);
@@ -263,6 +273,10 @@ export const getMyEmployeeProfile = asyncHandler(async (req, res) => {
 });
 
 export const getEmployeeById = asyncHandler(async (req, res) => {
+  if (!DIRECTORY_ROLES.includes(req.user.role) && req.params.id !== req.user._id.toString()) {
+    return res.status(403).json({ message: 'You can only view your own profile' });
+  }
+
   const user = await User.findById(req.params.id)
     .select('-passwordHash -refreshToken -resetTokenHash -resetTokenExpiresAt')
     .populate('manager', 'name email designation');
@@ -436,6 +450,10 @@ export const deactivateEmployee = asyncHandler(async (req, res) => {
 });
 
 export const listEmployeeDocuments = asyncHandler(async (req, res) => {
+  if (!DIRECTORY_ROLES.includes(req.user.role) && req.params.id !== req.user._id.toString()) {
+    return res.status(403).json({ message: 'You can only access your own documents' });
+  }
+
   const employee = await User.findById(req.params.id);
   if (!employee) {
     return res.status(404).json({ message: 'Employee not found' });
@@ -512,6 +530,42 @@ export const deleteEmployeeDocument = asyncHandler(async (req, res) => {
   });
 
   res.json({ message: 'Document deleted successfully' });
+});
+
+export const changeEmployeeEmail = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ message: 'A valid email address is required' });
+  }
+
+  const conflict = await User.findOne({ email: email.toLowerCase(), _id: { $ne: req.params.id } });
+  if (conflict) {
+    return res.status(409).json({ message: 'This email is already in use by another account' });
+  }
+
+  const employee = await User.findById(req.params.id);
+  if (!employee) {
+    return res.status(404).json({ message: 'Employee not found' });
+  }
+
+  const oldEmail = employee.email;
+  employee.email = email.toLowerCase();
+  employee.refreshToken = null; // force re-login with new email
+  await employee.save();
+
+  await writeAuditLog({
+    actor: req.user._id,
+    action: 'employee.email_changed',
+    entityType: 'User',
+    entityId: employee._id,
+    metadata: { oldEmail, newEmail: employee.email }
+  });
+
+  const saved = await User.findById(employee._id)
+    .select('-passwordHash -refreshToken -resetTokenHash -resetTokenExpiresAt')
+    .populate('manager', 'name email designation');
+
+  return res.json({ message: 'Email updated successfully', employee: mapEmployee(saved) });
 });
 
 export const getOrgChart = asyncHandler(async (req, res) => {

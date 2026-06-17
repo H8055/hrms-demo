@@ -17,6 +17,7 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import PermissionsPage from './pages/PermissionsPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useAuth } from './context/AuthContext';
 
@@ -130,6 +131,14 @@ export default function App() {
         element={
           <ProtectedRoute permission={{ module: 'permissions', action: 'view' }}>
             <AuditLogsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/change-password"
+        element={
+          <ProtectedRoute>
+            <ChangePasswordPage />
           </ProtectedRoute>
         }
       />

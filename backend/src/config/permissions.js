@@ -120,7 +120,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
   },
   employee: {
     dashboard: { enabled: true, showInSidebar: true, actions: ['view'] },
-    employee: { enabled: true, showInSidebar: true, actions: ['view'] },
+    employee: { enabled: false, showInSidebar: false, actions: [] },
     attendance: { enabled: true, showInSidebar: true, actions: ['view', 'create'] },
     leave: { enabled: true, showInSidebar: true, actions: ['view', 'create'] },
     advance: { enabled: true, showInSidebar: true, actions: ['view', 'create'] },

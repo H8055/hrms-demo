@@ -143,6 +143,25 @@ export const me = asyncHandler(async (req, res) => {
   return res.json({ user: await serializeAuthUser(req.user) });
 });
 
+export const changePassword = asyncHandler(async (req, res) => {
+  if (validationErrorResult(req, res)) return;
+
+  const { oldPassword, newPassword } = req.body;
+  const user = await User.findById(req.user._id);
+
+  const matches = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!matches) {
+    return res.status(400).json({ message: 'Current password is incorrect' });
+  }
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.refreshToken = null;
+  await user.save();
+
+  res.clearCookie('refreshToken', refreshCookieOptions());
+  return res.json({ message: 'Password changed successfully. Please log in again.' });
+});
+
 export const bootstrapStatus = asyncHandler(async (req, res) => {
   const usersCount = await User.countDocuments();
   return res.json({

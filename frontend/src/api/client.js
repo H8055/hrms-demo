@@ -18,10 +18,13 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    const reqUrl = originalRequest?.url || '';
+    const isAuthEndpoint = reqUrl.startsWith('/auth/');
+
     if (
       error.response?.status === 401 &&
       !originalRequest?._retry &&
-      originalRequest?.url !== '/auth/refresh'
+      !isAuthEndpoint
     ) {
       originalRequest._retry = true;
 

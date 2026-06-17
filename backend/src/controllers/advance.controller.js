@@ -180,23 +180,26 @@ export const createAdvance = asyncHandler(async (req, res) => {
   const { amount, reason, repaymentPlan, notes } = req.body;
   const { start, end } = getMonthRange();
 
-  const duplicateThisMonth = await AdvanceRequest.findOne({
+  // Block only if there is a still-active (pending or approved) request this month.
+  // Rejected requests do NOT block a new submission.
+  const activeThisMonth = await AdvanceRequest.findOne({
     requestedBy: req.user._id,
     createdAt: { $gte: start, $lt: end },
-    status: { $ne: 'paid' }
+    status: { $in: ['pending', 'approved'] }
   });
 
-  if (duplicateThisMonth) {
-    return res.status(409).json({ message: 'You cannot request another advance this month unless your previous request has been paid out' });
+  if (activeThisMonth) {
+    return res.status(409).json({ message: 'You already have a pending or approved advance request this month. Wait for it to be resolved before submitting a new one.' });
   }
 
+  // Also block if there is any unresolved (pending or approved) request from a prior month.
   const activeRequest = await AdvanceRequest.findOne({
     requestedBy: req.user._id,
     status: { $in: ['pending', 'approved'] }
   });
 
   if (activeRequest) {
-    return res.status(409).json({ message: 'You already have an active advance request' });
+    return res.status(409).json({ message: 'You already have an active advance request. It must be approved and paid, or rejected, before you can submit a new one.' });
   }
 
   const advance = await AdvanceRequest.create({
