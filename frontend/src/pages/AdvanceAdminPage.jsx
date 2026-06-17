@@ -84,7 +84,7 @@ export default function AdvanceAdminPage() {
     setError('');
     try {
       const params = new URLSearchParams();
-      params.set('limit', '50');
+      params.set('limit', '200');
       if (statusFilter) params.set('status', statusFilter);
       if (search.trim()) params.set('q', search.trim());
 
@@ -316,6 +316,13 @@ export default function AdvanceAdminPage() {
           </div>
 
           {loading ? <div className="empty-state">Loading requests...</div> : null}
+
+          {!loading && filteredItems.length > 0 ? (
+            <p className="muted-label" style={{ marginBottom: '0.5rem' }}>
+              {filteredItems.length} request{filteredItems.length !== 1 ? 's' : ''}
+              {filteredItems.length === 200 ? ' · showing first 200, use filters to narrow results' : ''}
+            </p>
+          ) : null}
 
           {!loading && filteredItems.length === 0 ? (
             <div className="empty-state">No requests found for this filter.</div>

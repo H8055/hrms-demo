@@ -7,6 +7,7 @@ import {
   deleteEmployeeDocument,
   exportEmployeesCsv,
   getEmployeeById,
+  getEmployeeStats,
   getMyEmployeeProfile,
   getOrgChart,
   importEmployeesCsv,
@@ -22,6 +23,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 router.use(authenticate);
 router.get('/me', checkPermission('employee', 'view'), getMyEmployeeProfile);
+router.get('/stats', checkPermission('dashboard', 'view'), getEmployeeStats);
 router.get('/org-chart', checkPermission('employee', 'view'), getOrgChart);
 router.get('/export/csv', checkPermission('employee', 'export'), exportEmployeesCsv);
 router.post('/import-csv', checkPermission('employee', 'create'), [body('csvText').isString().withMessage('csvText is required')], importEmployeesCsv);

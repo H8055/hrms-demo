@@ -3,6 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 
+const features = [
+  { icon: '◫', title: 'Smart Dashboard', desc: 'Real-time KPIs, headcount charts, and attendance rates at a glance.' },
+  { icon: '👥', title: 'Employee Directory', desc: 'Searchable profiles, org chart, and document management.' },
+  { icon: '$', title: 'Advance Requests', desc: 'Full approval workflow from submission through payment.' },
+  { icon: '✔', title: 'Leave & Attendance', desc: 'Apply, approve, and track across the entire team.' },
+];
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -15,16 +22,11 @@ export default function LoginPage() {
     async function loadBootstrapStatus() {
       try {
         const { data } = await api.get('/auth/bootstrap-status');
-        setBootstrap({
-          loading: false,
-          requiresSetup: Boolean(data.requiresSetup),
-          apiReachable: true
-        });
+        setBootstrap({ loading: false, requiresSetup: Boolean(data.requiresSetup), apiReachable: true });
       } catch {
         setBootstrap({ loading: false, requiresSetup: false, apiReachable: false });
       }
     }
-
     loadBootstrapStatus();
   }, []);
 
@@ -32,12 +34,11 @@ export default function LoginPage() {
     event.preventDefault();
     setSubmitting(true);
     setError('');
-
     try {
       await login(form);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Invalid email or password');
     } finally {
       setSubmitting(false);
     }
@@ -45,85 +46,109 @@ export default function LoginPage() {
 
   return (
     <div className="auth-screen">
+      {/* Left: branding panel */}
       <section className="auth-panel auth-panel-primary">
         <div className="auth-copy">
-          <span className="eyebrow">MERN • mobile-first • responsive</span>
-          <h1>HRMS for teams that need desktop power and mobile simplicity.</h1>
-          <p>
-            This starter includes secure authentication, a responsive dashboard shell, and the
-            Advance Request workflow from your sprint plan.
-          </p>
-          <div className="feature-grid compact">
-            <div className="feature-card"><strong>375px</strong><span>Phone-ready forms</span></div>
-            <div className="feature-card"><strong>768px</strong><span>Tablet-friendly layout</span></div>
-            <div className="feature-card"><strong>1280px</strong><span>Desktop data density</span></div>
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <img src="/mslogo.png" alt="MS HRMS" style={{ width: 44, height: 44, borderRadius: 12, objectFit: 'contain', background: 'white', padding: 4, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'white' }}>MS HRMS</div>
+                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>HR Management Platform</div>
+              </div>
+            </div>
+            <h1>Built for HR teams that move fast.</h1>
+            <p>Everything you need to manage employees, track attendance, process leaves, and run advance request workflows — desktop and mobile.</p>
+          </div>
+
+          <div style={{ display: 'grid', gap: '0.85rem' }}>
+            {features.map((f) => (
+              <div key={f.title} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', padding: '0.9rem 1rem', borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ fontSize: '1.2rem', flexShrink: 0, marginTop: '0.1rem' }}>{f.icon}</span>
+                <div>
+                  <strong style={{ color: 'white', fontSize: '0.9rem' }}>{f.title}</strong>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)' }}>{f.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="auth-panel auth-panel-form">
-        <form className="card form-card" onSubmit={handleSubmit}>
+      {/* Right: login form */}
+      <section className="auth-panel auth-panel-form" style={{ background: 'var(--bg)' }}>
+        <div className="card form-card">
+          {/* Logo (shown on mobile when left panel is hidden) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.75rem' }}>
+            <img src="/mslogo.png" alt="MS HRMS" style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'contain', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>MS HRMS</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>HR Management</div>
+            </div>
+          </div>
+
           <div className="form-header">
-            <h2>Sign in</h2>
-            <p>Use your work account to continue.</p>
+            <h2>Welcome back</h2>
+            <p>Sign in to your HR workspace</p>
           </div>
 
-          {!bootstrap.loading && !bootstrap.apiReachable ? (
+          {!bootstrap.loading && !bootstrap.apiReachable && (
             <div className="alert alert-error">
-              Cannot reach the backend API. Please make sure the backend server and MongoDB are running.
+              Cannot reach the backend API. Make sure the server and MongoDB are running.
             </div>
-          ) : null}
-
-          {!bootstrap.loading && bootstrap.requiresSetup ? (
+          )}
+          {!bootstrap.loading && bootstrap.requiresSetup && (
             <div className="alert alert-success">
-              No users exist yet. <Link to="/setup-admin">Create the first admin account</Link> before logging in.
+              No users yet. <Link to="/setup-admin">Create the first admin</Link> before logging in.
             </div>
-          ) : null}
-
-          {!bootstrap.loading && bootstrap.apiReachable && !bootstrap.requiresSetup ? (
-            <div className="alert alert-success">
-              If you used seed data, try <strong>admin@example.com</strong> / <strong>Password@123</strong>.
+          )}
+          {!bootstrap.loading && bootstrap.apiReachable && !bootstrap.requiresSetup && (
+            <div className="alert alert-success" style={{ fontSize: '0.82rem' }}>
+              Demo: <strong>admin@example.com</strong> / <strong>Password@123</strong>
             </div>
-          ) : null}
+          )}
+          {error && <div className="alert alert-error">{error}</div>}
 
-          {error ? <div className="alert alert-error">{error}</div> : null}
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 0 }}>
+            <label className="field">
+              <span>Email address</span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="you@company.com"
+                required
+                autoComplete="email"
+              />
+            </label>
 
-          <label className="field">
-            <span>Email</span>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="admin@example.com"
-              required
-            />
-          </label>
+            <label className="field">
+              <span>Password</span>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+              />
+            </label>
 
-          <label className="field">
-            <span>Password</span>
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-              placeholder="Password@123"
-              required
-            />
-          </label>
+            <div style={{ textAlign: 'right', marginTop: '-0.5rem', marginBottom: '1.25rem' }}>
+              <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600 }}>Forgot password?</Link>
+            </div>
 
-          <button className="primary-button" type="submit" disabled={submitting || bootstrap.requiresSetup}>
-            {submitting ? 'Signing in...' : 'Login'}
-          </button>
+            <button className="primary-button" type="submit" disabled={submitting || bootstrap.requiresSetup} style={{ width: '100%', justifyContent: 'center', minHeight: 46, fontSize: '0.95rem' }}>
+              {submitting ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
 
-          <div className="auth-links">
-            <Link to="/forgot-password">Forgot password?</Link>
-            <span>•</span>
-            <Link to="/reset-password">Have a token?</Link>
-            <span>•</span>
+          <div className="auth-links" style={{ marginTop: '1.25rem' }}>
             <Link to="/setup-admin">Setup admin</Link>
+            <span>·</span>
+            <Link to="/reset-password">Have a reset token?</Link>
           </div>
-
-          <p className="helper-text">If login fails, it usually means the first admin has not been created yet or demo data was not seeded.</p>
-        </form>
+        </div>
       </section>
     </div>
   );

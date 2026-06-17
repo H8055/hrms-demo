@@ -1,177 +1,351 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import StatCard from '../components/StatCard';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
-const flowCardsByRole = {
-  employee: [
-    { title: 'Self-service', description: 'Track attendance, apply leave, and follow your advance request status.' },
-    { title: 'Advance requests', description: 'Submit amount, reason, and repayment plan from any device.' },
-    { title: 'History visibility', description: 'See pending, approved, rejected, and paid milestones in one timeline.' }
-  ],
-  hr: [
-    { title: 'HR manager view', description: 'Review employee requests, approvals, payroll linkage, and reports.' },
-    { title: 'Priority module', description: 'Advance requests now include review history, notifications, and payment steps.' },
-    { title: 'Responsive action center', description: 'Approve or reject from tablet/mobile without losing the full request context.' }
-  ],
-  manager: [
-    { title: 'Line manager flow', description: 'Review team-related requests and decision history quickly.' },
-    { title: 'Approvals', description: 'Assess amount, reason, employee history, and next action from one panel.' },
-    { title: 'System notifications', description: 'Receive in-app alerts when a new request needs attention.' }
-  ],
-  admin: [
-    { title: 'Admin control', description: 'Own the end-to-end flow: alert, review, approve/reject, and process payment.' },
-    { title: 'Audit-ready history', description: 'Every advance step is logged and visible to the right users.' },
-    { title: 'Priority workflow', description: 'The advance request module is implemented first as the project’s priority feature.' }
-  ]
-};
+/* ── Icon sets for stat cards ───────────────────────────────── */
+const EmployeeIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+const AttendIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+);
+const LeaveIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+    <path d="M9 16l2 2 4-4"/>
+  </svg>
+);
+const BriefcaseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+  </svg>
+);
 
-const deliveryHighlights = [
-  'Dynamic roles and master data from settings',
-  'Delegable permissions and sidebar control',
-  'Employee documents with upload foundation',
-  'Swagger docs and production middleware base'
-];
-
-export default function DashboardPage() {
-  const { user, hasPermission } = useAuth();
-  const [summary, setSummary] = useState(null);
-  const [recentItems, setRecentItems] = useState([]);
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [summaryResponse, listResponse] = await Promise.all([
-          api.get('/advances/summary'),
-          hasPermission('advance', 'approve') ? api.get('/advances?limit=5') : api.get('/advances/mine')
-        ]);
-
-        setSummary(summaryResponse.data);
-        setRecentItems((listResponse.data.items || []).slice(0, 5));
-      } catch {
-        setSummary(null);
-        setRecentItems([]);
-      }
-    }
-
-    loadData();
-  }, [user.role, hasPermission]);
-
-  const roleCards = useMemo(() => flowCardsByRole[user.role] || flowCardsByRole.employee, [user.role]);
+/* ── Bar Chart (Headcount by Department) ───────────────────── */
+function BarChart({ data }) {
+  if (!data || data.length === 0) {
+    return <div className="empty-state" style={{ marginTop: '1rem' }}>No department data yet.</div>;
+  }
+  const max = Math.max(...data.map((d) => d.count), 1);
+  const chartH = 180;
+  const barW = Math.max(20, Math.floor((320 - data.length * 8) / data.length));
 
   return (
-    <AppLayout
-      eyebrow="HRMS control center"
-      title="Dashboard"
-      description="Production-hardening, permissions, and dynamic master-data foundations are now reflected across the platform shell."
-    >
-      <section className="stats-grid">
-        <StatCard title="Signed in as" value={user.role.toUpperCase()} hint={user.email} />
-        <StatCard title="Pending requests" value={summary?.pendingCount ?? 0} hint="Awaiting review or action" />
+    <div className="chart-container" style={{ paddingTop: '0.5rem' }}>
+      <svg
+        viewBox={`0 0 ${Math.max(320, data.length * (barW + 10))} ${chartH + 48}`}
+        style={{ width: '100%', overflow: 'visible' }}
+        aria-label="Headcount by department bar chart"
+      >
+        {/* Y grid lines */}
+        {[0.25, 0.5, 0.75, 1].map((pct) => {
+          const y = chartH - pct * chartH;
+          return (
+            <g key={pct}>
+              <line x1="0" y1={y} x2="100%" y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 3" />
+              <text x="-4" y={y + 4} textAnchor="end" fontSize="10" fill="#94a3b8">
+                {Math.round(pct * max)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Bars */}
+        {data.map((d, i) => {
+          const h = Math.max(4, (d.count / max) * chartH);
+          const x = i * (barW + 10) + 14;
+          const y = chartH - h;
+          return (
+            <g key={d.department}>
+              <rect x={x} y={y} width={barW} height={h} rx="4" fill="#22d3ee" opacity="0.85" />
+              <text
+                x={x + barW / 2}
+                y={chartH + 16}
+                textAnchor="middle"
+                fontSize="10"
+                fill="#64748b"
+              >
+                {d.department.slice(0, 8)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ── Line Chart (Attendance Rate) ───────────────────────────── */
+function LineChart({ data }) {
+  if (!data || data.length === 0) {
+    return <div className="empty-state" style={{ marginTop: '1rem' }}>No attendance data yet.</div>;
+  }
+
+  const chartW = 300;
+  const chartH = 140;
+  const minVal = 80;
+  const maxVal = 100;
+  const range = maxVal - minVal;
+
+  const hasRealData = data.some((d) => d.rate !== null);
+
+  const displayData = data.map((d, i) => ({
+    ...d,
+    rate: d.rate !== null ? d.rate : null,
+    x: (i / (data.length - 1)) * chartW,
+    y: d.rate !== null ? chartH - ((d.rate - minVal) / range) * chartH : null
+  }));
+
+  const validPoints = displayData.filter((d) => d.y !== null);
+  const polylinePoints = validPoints.map((d) => `${d.x},${d.y}`).join(' ');
+
+  return (
+    <div className="chart-container" style={{ paddingTop: '0.5rem' }}>
+      <svg
+        viewBox={`-20 -10 ${chartW + 30} ${chartH + 40}`}
+        style={{ width: '100%', overflow: 'visible' }}
+        aria-label="Weekly attendance rate line chart"
+      >
+        {/* Y grid + labels */}
+        {[80, 85, 90, 95, 100].map((v) => {
+          const y = chartH - ((v - minVal) / range) * chartH;
+          return (
+            <g key={v}>
+              <line x1="0" y1={y} x2={chartW} y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 3" />
+              <text x="-8" y={y + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{v}</text>
+            </g>
+          );
+        })}
+
+        {/* Line + area fill */}
+        {hasRealData && validPoints.length > 1 && (
+          <>
+            <defs>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <polygon
+              points={`${validPoints[0].x},${chartH} ${polylinePoints} ${validPoints[validPoints.length - 1].x},${chartH}`}
+              fill="url(#areaGrad)"
+            />
+            <polyline
+              points={polylinePoints}
+              fill="none"
+              stroke="#3b82f6"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {validPoints.map((d) => (
+              <circle key={d.week} cx={d.x} cy={d.y} r="4" fill="#3b82f6" stroke="white" strokeWidth="2" />
+            ))}
+          </>
+        )}
+
+        {/* X axis labels */}
+        {displayData.map((d) => (
+          <text key={d.week} x={d.x} y={chartH + 18} textAnchor="middle" fontSize="10" fill="#94a3b8">
+            {d.week}
+          </text>
+        ))}
+
+        {/* Rate labels */}
+        {validPoints.map((d) => (
+          <text key={`lbl-${d.week}`} x={d.x} y={d.y - 9} textAnchor="middle" fontSize="10" fill="#3b82f6" fontWeight="600">
+            {d.rate}%
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+/* ── Recent Leave requests widget ───────────────────────────── */
+function RecentLeaveRow({ item }) {
+  const initials = (item.user?.name || 'UN').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  const colorIdx = initials.charCodeAt(0) % 10;
+  const statusClass = item.status === 'approved' ? 'approved' : item.status === 'rejected' ? 'rejected' : 'pending';
+
+  return (
+    <div className="list-item" style={{ padding: '0.75rem 0.9rem', background: 'var(--panel-soft)', borderRadius: '10px', border: '1px solid var(--panel-border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div className={`emp-avatar emp-avatar-${colorIdx}`} style={{ width: 32, height: 32, fontSize: '0.72rem' }}>{initials}</div>
+        <div>
+          <strong style={{ fontSize: '0.875rem' }}>{item.user?.name || 'Employee'}</strong>
+          <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--muted)' }}>{item.leaveType} · {item.days} day{item.days !== 1 ? 's' : ''}</p>
+        </div>
+      </div>
+      <span className={`status-chip ${statusClass}`}>{item.status}</span>
+    </div>
+  );
+}
+
+/* ── Main Page ──────────────────────────────────────────────── */
+export default function DashboardPage() {
+  const { user, hasPermission } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [recentLeaves, setRecentLeaves] = useState([]);
+  const [recentAdvances, setRecentAdvances] = useState([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [statsRes, leavesRes, advancesRes] = await Promise.all([
+          api.get('/employees/stats'),
+          hasPermission('leave', 'view') ? api.get('/leaves?limit=5') : Promise.resolve({ data: { items: [] } }),
+          hasPermission('advance', 'view') ? api.get('/advances?limit=5') : Promise.resolve({ data: { items: [] } })
+        ]);
+        setStats(statsRes.data);
+        setRecentLeaves((leavesRes.data.items || []).slice(0, 5));
+        setRecentAdvances((advancesRes.data.items || []).slice(0, 5));
+      } catch {
+        setStats(null);
+      }
+    }
+    load();
+  }, []);
+
+  const deptData = stats?.departmentHeadcount || [];
+  const weeklyData = stats?.weeklyAttendanceRate || [];
+
+  return (
+    <AppLayout title="Dashboard">
+      {/* ── KPI Stats Row ─────────────────────────────────────── */}
+      <div className="stats-grid">
         <StatCard
-          title="Paid advances"
-          value={`₹${(summary?.totalDisbursed ?? 0).toLocaleString('en-IN')}`}
-          hint="Recorded disbursements"
+          title="Total Employees"
+          value={stats?.totalEmployees ?? '—'}
+          icon={<EmployeeIcon />}
+          iconColor="blue"
+          trendUp
+          trendLabel={stats?.newThisMonth != null ? `+${stats.newThisMonth} new` : undefined}
         />
         <StatCard
-          title="This month requested"
-          value={`₹${(summary?.thisMonthRequested ?? 0).toLocaleString('en-IN')}`}
-          hint={summary?.hasActiveRequest ? 'An active request already exists' : 'No active request restriction hit'}
+          title="Present Today"
+          value={stats?.presentToday ?? '—'}
+          icon={<AttendIcon />}
+          iconColor="green"
+          trendUp
+          trendLabel={stats?.presentTodayPercent != null ? `${stats.presentTodayPercent}%` : undefined}
         />
-      </section>
+        <StatCard
+          title="On Leave"
+          value={stats?.onLeave ?? '—'}
+          icon={<LeaveIcon />}
+          iconColor="orange"
+          trendUp={false}
+          trendLabel={stats?.pendingLeaves != null ? `+${stats.pendingLeaves} pending` : undefined}
+        />
+        <StatCard
+          title="Open Positions"
+          value={stats?.openPositions ?? '—'}
+          icon={<BriefcaseIcon />}
+          iconColor="purple"
+          trendUp
+          trendLabel={stats?.openPositions != null ? `${stats.openPositions} roles` : undefined}
+        />
+      </div>
 
-      <section className="two-column-layout">
+      {/* ── Charts Row ────────────────────────────────────────── */}
+      <div className="two-column-layout">
         <article className="card card-elevated">
           <div className="section-header">
             <div>
-              <h3>Delivery highlights</h3>
-              <p>What is already moving the HRMS toward production readiness.</p>
+              <h3>Headcount by Department</h3>
+              <p>{new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
             </div>
+            <a href="/employees" className="chart-view-link">
+              View all
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </a>
           </div>
-          <div className="feature-grid">
-            {deliveryHighlights.map((item) => (
-              <div className="feature-card" key={item}>
-                <strong>{item}</strong>
-                <span>Available in the current build and ready for deeper rollout across modules.</span>
-              </div>
-            ))}
-          </div>
+          <BarChart data={deptData} />
         </article>
 
         <article className="card card-elevated">
           <div className="section-header">
             <div>
-              <h3>Role experience</h3>
-              <p>These cards reflect the employee / HR / line manager flow you shared.</p>
+              <h3>Attendance Rate</h3>
+              <p>Last 6 weeks</p>
             </div>
+          </div>
+          <LineChart data={weeklyData} />
+        </article>
+      </div>
+
+      {/* ── Activity Row ──────────────────────────────────────── */}
+      <div className="two-column-layout">
+        {/* Recent Leaves */}
+        <article className="card card-elevated">
+          <div className="section-header">
+            <div>
+              <h3>Recent Leave Requests</h3>
+              <p>Latest submissions across the team</p>
+            </div>
+            <a href="/leaves" className="chart-view-link">View all</a>
           </div>
           <div className="list-stack">
-            {roleCards.map((card) => (
-              <div className="mini-history-item" key={card.title}>
-                <div>
-                  <strong>{card.title}</strong>
-                  <p>{card.description}</p>
-                </div>
-                <span className="status-chip approved">role-aware</span>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="two-column-layout">
-        <article className="card card-elevated">
-          <div className="section-header">
-            <div>
-              <h3>Advance lifecycle</h3>
-              <p>The priority workflow remains the most complete part of the HRMS.</p>
-            </div>
-          </div>
-          <div className="feature-grid">
-            <div className="feature-card feature-card-highlight">
-              <strong>Submitted → Pending → Approved / Rejected → Paid</strong>
-              <span>Employees and admins can both see the history log and current status.</span>
-            </div>
-            <div className="feature-card">
-              <strong>Notifications</strong>
-              <span>Email and in-app signals guide the request from submission to payout.</span>
-            </div>
-            <div className="feature-card">
-              <strong>Audit trail</strong>
-              <span>Every major action is tracked for traceability and governance.</span>
-            </div>
-          </div>
-        </article>
-
-        <article className="card card-elevated">
-          <div className="section-header">
-            <div>
-              <h3>Latest advance activity</h3>
-              <p>Recent requests from the priority module.</p>
-            </div>
-          </div>
-
-          <div className="list-stack">
-            {recentItems.length === 0 ? (
-              <div className="empty-state">No advance activity yet. Submit a request to start the flow.</div>
+            {recentLeaves.length === 0 ? (
+              <div className="empty-state">No leave requests yet.</div>
             ) : (
-              recentItems.map((item) => (
-                <div className="list-item" key={item.id}>
-                  <div>
-                    <strong>{item.requestedBy?.name || 'You'}</strong>
-                    <p>{item.reason}</p>
-                  </div>
-                  <div className="list-meta">
-                    <span className={`status-chip ${item.status}`}>{item.status}</span>
-                    <strong>₹{item.amount.toLocaleString('en-IN')}</strong>
-                  </div>
-                </div>
-              ))
+              recentLeaves.map((item) => <RecentLeaveRow key={item.id} item={item} />)
             )}
           </div>
         </article>
-      </section>
+
+        {/* Recent Advances */}
+        <article className="card card-elevated">
+          <div className="section-header">
+            <div>
+              <h3>Recent Advance Requests</h3>
+              <p>Priority workflow activity</p>
+            </div>
+            <a href="/advances/my" className="chart-view-link">View all</a>
+          </div>
+          <div className="list-stack">
+            {recentAdvances.length === 0 ? (
+              <div className="empty-state">No advance activity yet.</div>
+            ) : (
+              recentAdvances.map((item) => {
+                const statusClass = item.status === 'approved' || item.status === 'paid' ? 'approved' : item.status === 'rejected' ? 'rejected' : 'pending';
+                const initials = (item.requestedBy?.name || 'UN').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+                const colorIdx = initials.charCodeAt(0) % 10;
+                return (
+                  <div key={item.id} className="list-item" style={{ padding: '0.75rem 0.9rem', background: 'var(--panel-soft)', borderRadius: '10px', border: '1px solid var(--panel-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <div className={`emp-avatar emp-avatar-${colorIdx}`} style={{ width: 32, height: 32, fontSize: '0.72rem' }}>{initials}</div>
+                      <div>
+                        <strong style={{ fontSize: '0.875rem' }}>{item.requestedBy?.name || user.name}</strong>
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--muted)' }}>{item.reason?.slice(0, 35)}{item.reason?.length > 35 ? '…' : ''}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
+                      <span className={`status-chip ${statusClass}`}>{item.status}</span>
+                      <strong style={{ fontSize: '0.82rem' }}>
+                        {typeof item.amount === 'number' ? `$${item.amount.toLocaleString()}` : '—'}
+                      </strong>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </article>
+      </div>
     </AppLayout>
   );
 }

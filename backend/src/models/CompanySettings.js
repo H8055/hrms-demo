@@ -30,6 +30,10 @@ const companySettingsSchema = new mongoose.Schema(
       type: [String],
       default: []
     },
+    openPositions: {
+      type: Number,
+      default: 0
+    },
     advanceWorkflow: {
       approvalDepartments: {
         type: [String],
