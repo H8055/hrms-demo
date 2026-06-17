@@ -334,7 +334,9 @@ export const getAdvanceById = asyncHandler(async (req, res) => {
   }
 
   const isOwner = item.requestedBy?._id?.toString() === req.user._id.toString();
-  const elevated = await canManageAdvance(req.user);
+  const canApprove = await canUserPerform(req.user, 'advance', 'approve');
+  const canPay = await canUserPerform(req.user, 'advance', 'pay');
+  const elevated = canApprove || canPay;
 
   if (!isOwner && !elevated) {
     return res.status(403).json({ message: 'Not authorised to view this request' });

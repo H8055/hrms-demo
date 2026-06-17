@@ -5,6 +5,9 @@ import { fileURLToPath } from 'url';
 import { validationResult } from 'express-validator';
 import { EmployeeDocument } from '../models/EmployeeDocument.js';
 import { User } from '../models/User.js';
+import { AttendanceRecord } from '../models/AttendanceRecord.js';
+import { LeaveRequest } from '../models/LeaveRequest.js';
+import { CompanySettings } from '../models/CompanySettings.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { sendMail } from '../services/mail.service.js';
@@ -52,6 +55,8 @@ function mapEmployee(user) {
           designation: user.manager.designation
         }
       : null,
+    currentSalary: user.currentSalary || 0,
+    location: user.location || '',
     isActive: user.isActive,
     createdAt: user.createdAt
   };
@@ -529,5 +534,65 @@ export const getOrgChart = asyncHandler(async (req, res) => {
       managerName: item.manager?.name || null,
       managerId: item.manager?._id || null
     }))
+  });
+});
+
+export const getEmployeeStats = asyncHandler(async (req, res) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const lastMonthStart = new Date(today);
+  lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+  lastMonthStart.setDate(1);
+  const thisMonthStart = new Date(today);
+  thisMonthStart.setDate(1);
+
+  const [totalEmployees, newThisMonth, presentToday, onLeave, pendingLeaves, departmentAgg, settings] = await Promise.all([
+    User.countDocuments({ isActive: true }),
+    User.countDocuments({ isActive: true, createdAt: { $gte: thisMonthStart } }),
+    AttendanceRecord.countDocuments({ date: { $gte: today, $lt: tomorrow }, status: 'present' }),
+    LeaveRequest.countDocuments({ status: 'approved', fromDate: { $lte: today }, toDate: { $gte: today } }),
+    LeaveRequest.countDocuments({ status: 'pending' }),
+    User.aggregate([
+      { $match: { isActive: true, department: { $ne: '' } } },
+      { $group: { _id: '$department', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]),
+    CompanySettings.findOne({}).lean()
+  ]);
+
+  // Last 6 weeks attendance rate
+  const weeklyAttendanceRate = [];
+  for (let i = 5; i >= 0; i--) {
+    const wStart = new Date(today);
+    wStart.setDate(today.getDate() - i * 7 - today.getDay());
+    wStart.setHours(0, 0, 0, 0);
+    const wEnd = new Date(wStart);
+    wEnd.setDate(wStart.getDate() + 7);
+
+    const [present, total] = await Promise.all([
+      AttendanceRecord.countDocuments({ date: { $gte: wStart, $lt: wEnd }, status: 'present' }),
+      AttendanceRecord.countDocuments({ date: { $gte: wStart, $lt: wEnd } })
+    ]);
+
+    weeklyAttendanceRate.push({
+      week: `W${6 - i}`,
+      rate: total > 0 ? Math.round((present / total) * 100) : null
+    });
+  }
+
+  res.json({
+    totalEmployees,
+    newThisMonth,
+    presentToday,
+    presentTodayPercent: totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0,
+    onLeave,
+    pendingLeaves,
+    openPositions: settings?.openPositions ?? 0,
+    departmentHeadcount: departmentAgg.map((d) => ({ department: d._id, count: d.count })),
+    weeklyAttendanceRate
   });
 });

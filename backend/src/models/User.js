@@ -87,6 +87,15 @@ const userSchema = new mongoose.Schema(
       accountNumber: { type: String, default: '' },
       ifsc: { type: String, default: '' }
     },
+    currentSalary: {
+      type: Number,
+      default: 0
+    },
+    location: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     isActive: {
       type: Boolean,
       default: true
