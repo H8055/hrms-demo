@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function LeavePage() {
   const { hasPermission } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const canApprove = hasPermission('leave', 'approve');
   const [supportData, setSupportData] = useState({ masterData: {} });
   const [form, setForm] = useState({
@@ -16,8 +18,6 @@ export default function LeavePage() {
   const [summary, setSummary] = useState(null);
   const [myItems, setMyItems] = useState([]);
   const [adminItems, setAdminItems] = useState([]);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
   async function loadSupportData() {
     try {
@@ -41,7 +41,7 @@ export default function LeavePage() {
       setMyItems(mineRes.data.items || []);
       setAdminItems(adminRes?.data?.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load leave data');
+      toastError(err.response?.data?.message || 'Failed to load leave data');
     }
   }
 
@@ -58,8 +58,7 @@ export default function LeavePage() {
     event.preventDefault();
     try {
       await api.post('/leaves', form);
-      setMessage('Leave request submitted.');
-      setError('');
+      toastSuccess('Leave request submitted.');
       setForm({
         leaveType: leaveTypes[0]?.key || 'annual',
         fromDate: new Date().toISOString().slice(0, 10),
@@ -68,7 +67,7 @@ export default function LeavePage() {
       });
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit leave request');
+      toastError(err.response?.data?.message || 'Failed to submit leave request');
     }
   }
 
@@ -76,11 +75,10 @@ export default function LeavePage() {
     const comment = window.prompt(`Optional comment for ${decision}`) || '';
     try {
       await api.put(`/leaves/${id}/decision`, { decision, comment });
-      setMessage(`Leave ${decision}.`);
-      setError('');
+      toastSuccess(`Leave ${decision}.`);
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update leave decision');
+      toastError(err.response?.data?.message || 'Failed to update leave decision');
     }
   }
 
@@ -92,9 +90,6 @@ export default function LeavePage() {
         ))}
         <div className="stat-card"><p>Pending</p><h3>{summary?.pending ?? 0}</h3><small>Awaiting approval</small></div>
       </section>
-
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
 
       <section className="split-layout">
         <article className="card">

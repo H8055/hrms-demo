@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
+import { useToast } from '../context/ToastContext';
 
 const initialState = {
   amount: '',
@@ -19,9 +20,8 @@ const flowSteps = [
 ];
 
 export default function AdvanceRequestPage() {
+  const { success: toastSuccess, error: toastError } = useToast();
   const [form, setForm] = useState(initialState);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [summary, setSummary] = useState(null);
 
@@ -41,8 +41,6 @@ export default function AdvanceRequestPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setSubmitting(true);
-    setError('');
-    setMessage('');
 
     try {
       await api.post('/advances', {
@@ -51,11 +49,11 @@ export default function AdvanceRequestPage() {
         repaymentPlan: form.repaymentPlan,
         notes: form.notes
       });
-      setMessage('Advance request submitted successfully. Status is now pending.');
+      toastSuccess('Advance request submitted successfully. Status is now pending.');
       setForm(initialState);
       loadSummary();
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not submit advance request');
+      toastError(err.response?.data?.message || 'Could not submit advance request');
     } finally {
       setSubmitting(false);
     }
@@ -80,9 +78,6 @@ export default function AdvanceRequestPage() {
               You already have a pending or approved advance request. A new request will be blocked until that one is completed.
             </div>
           ) : null}
-
-          {message ? <div className="alert alert-success">{message}</div> : null}
-          {error ? <div className="alert alert-error">{error}</div> : null}
 
           <div className="form-grid">
             <label className="field">

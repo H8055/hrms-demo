@@ -62,6 +62,12 @@ export const MODULE_DEFINITIONS = [
     label: 'Permissions',
     description: 'Role permission matrix, sidebar visibility, and permission governance',
     supportsSidebar: true
+  },
+  {
+    key: 'change-requests',
+    label: 'Change Requests',
+    description: 'Profile update approvals and employee document verification queue',
+    supportsSidebar: true
   }
 ];
 
@@ -80,7 +86,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     performance: { enabled: true, showInSidebar: true, actions: ALL_ACTIONS },
     reports: { enabled: true, showInSidebar: true, actions: ALL_ACTIONS },
     settings: { enabled: true, showInSidebar: true, actions: ALL_ACTIONS },
-    permissions: { enabled: true, showInSidebar: true, actions: ALL_ACTIONS }
+    permissions: { enabled: true, showInSidebar: true, actions: ALL_ACTIONS },
+    'change-requests': { enabled: true, showInSidebar: true, actions: ALL_ACTIONS }
   },
   hr: {
     dashboard: { enabled: true, showInSidebar: true, actions: ['view'] },
@@ -92,7 +99,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     performance: { enabled: true, showInSidebar: true, actions: ['view', 'create', 'edit', 'export'] },
     reports: { enabled: true, showInSidebar: true, actions: ['view', 'export'] },
     settings: { enabled: true, showInSidebar: true, actions: ['view', 'edit'] },
-    permissions: { enabled: false, showInSidebar: false, actions: [] }
+    permissions: { enabled: false, showInSidebar: false, actions: [] },
+    'change-requests': { enabled: true, showInSidebar: true, actions: ['view', 'edit'] }
   },
   accounts: {
     dashboard: { enabled: true, showInSidebar: true, actions: ['view'] },
@@ -104,7 +112,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     performance: { enabled: false, showInSidebar: false, actions: [] },
     reports: { enabled: true, showInSidebar: true, actions: ['view', 'export'] },
     settings: { enabled: false, showInSidebar: false, actions: [] },
-    permissions: { enabled: false, showInSidebar: false, actions: [] }
+    permissions: { enabled: false, showInSidebar: false, actions: [] },
+    'change-requests': { enabled: false, showInSidebar: false, actions: [] }
   },
   manager: {
     dashboard: { enabled: true, showInSidebar: true, actions: ['view'] },
@@ -116,7 +125,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     performance: { enabled: true, showInSidebar: true, actions: ['view', 'create', 'edit', 'approve'] },
     reports: { enabled: true, showInSidebar: true, actions: ['view'] },
     settings: { enabled: false, showInSidebar: false, actions: [] },
-    permissions: { enabled: false, showInSidebar: false, actions: [] }
+    permissions: { enabled: false, showInSidebar: false, actions: [] },
+    'change-requests': { enabled: false, showInSidebar: false, actions: [] }
   },
   employee: {
     dashboard: { enabled: true, showInSidebar: true, actions: ['view'] },
@@ -128,6 +138,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     performance: { enabled: true, showInSidebar: true, actions: ['view', 'edit'] },
     reports: { enabled: false, showInSidebar: false, actions: [] },
     settings: { enabled: false, showInSidebar: false, actions: [] },
-    permissions: { enabled: false, showInSidebar: false, actions: [] }
+    permissions: { enabled: false, showInSidebar: false, actions: [] },
+    'change-requests': { enabled: false, showInSidebar: false, actions: [] }
   }
 };

@@ -4,6 +4,7 @@ import ProfileCompletionRing from '../components/ProfileCompletionRing';
 import { api } from '../api/client';
 import { openDocument } from '../api/download';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { DOCUMENT_GROUPS, SUBTYPE_LABELS, CATEGORY_LABELS } from '../constants/documents';
 
 const initialForm = {
@@ -37,6 +38,7 @@ const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').
 
 export default function EmployeesPage() {
   const { user, hasPermission } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [items, setItems] = useState([]);
   const [orgChart, setOrgChart] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -52,8 +54,6 @@ export default function EmployeesPage() {
   const [documentForm, setDocumentForm] = useState({ category: 'kyc', subType: 'aadhaar', documentNumber: '', issueDate: '', expiryDate: '', file: null });
   const [letterForm, setLetterForm] = useState({ templateKey: '', customValues: {} });
   const [emailChangeValue, setEmailChangeValue] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const canViewDirectory = user.role !== 'employee';
   const canManage = hasPermission('employee', 'create') || hasPermission('employee', 'edit');
   const canDeactivate = hasPermission('employee', 'delete');
@@ -116,7 +116,6 @@ export default function EmployeesPage() {
   }
 
   async function loadData() {
-    setError('');
     try {
       if (canViewDirectory) {
         const [employeesRes, orgRes] = await Promise.all([
@@ -139,7 +138,7 @@ export default function EmployeesPage() {
         setProfile(data.employee);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load employees');
+      toastError(err.response?.data?.message || 'Failed to load employees');
     }
   }
 
@@ -163,14 +162,12 @@ export default function EmployeesPage() {
 
   async function changeEmail(event) {
     event.preventDefault();
-    setError('');
-    setMessage('');
     try {
       await api.put(`/employees/${selectedId}/email`, { email: emailChangeValue });
-      setMessage('Email updated successfully.');
+      toastSuccess('Email updated successfully.');
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update email');
+      toastError(err.response?.data?.message || 'Failed to update email');
     }
   }
 
@@ -225,8 +222,6 @@ export default function EmployeesPage() {
 
   async function submitForm(event) {
     event.preventDefault();
-    setError('');
-    setMessage('');
     try {
       const payload = {
         ...form,
@@ -237,10 +232,10 @@ export default function EmployeesPage() {
       };
       if (selectedId) {
         await api.put(`/employees/${selectedId}`, payload);
-        setMessage('Employee updated successfully.');
+        toastSuccess('Employee updated successfully.');
       } else {
         await api.post('/employees', payload);
-        setMessage('Employee created successfully.');
+        toastSuccess('Employee created successfully.');
       }
       await loadData();
       if (selectedId) await loadCompletion(selectedId);
@@ -248,7 +243,7 @@ export default function EmployeesPage() {
         setForm({ ...initialForm, role: roles[0]?.key || 'employee' });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save employee');
+      toastError(err.response?.data?.message || 'Failed to save employee');
     }
   }
 
@@ -257,26 +252,24 @@ export default function EmployeesPage() {
     if (!window.confirm('Mark this employee as exited?')) return;
     try {
       await api.put(`/employees/${selectedId}/deactivate`);
-      setMessage('Employee marked as exited.');
+      toastSuccess('Employee marked as exited.');
       setSelectedId('');
       setForm({ ...initialForm, role: roles[0]?.key || 'employee' });
       setDocuments([]);
       setCompletion(null);
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to deactivate employee');
+      toastError(err.response?.data?.message || 'Failed to deactivate employee');
     }
   }
 
   async function importCsv() {
-    setError('');
-    setMessage('');
     try {
       const { data } = await api.post('/employees/import-csv', { csvText: importText });
-      setMessage(`CSV import completed. Created: ${data.createdCount}, skipped: ${data.skipped.length}`);
+      toastSuccess(`CSV import completed. Created: ${data.createdCount}, skipped: ${data.skipped.length}`);
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to import CSV');
+      toastError(err.response?.data?.message || 'Failed to import CSV');
     }
   }
 
@@ -296,13 +289,12 @@ export default function EmployeesPage() {
     if (documentForm.expiryDate) formData.append('expiryDate', documentForm.expiryDate);
     try {
       await api.post(`/employees/${selectedId}/documents`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setMessage('Document uploaded successfully.');
-      setError('');
+      toastSuccess('Document uploaded successfully.');
       setDocumentForm({ category: 'kyc', subType: 'aadhaar', documentNumber: '', issueDate: '', expiryDate: '', file: null });
       await loadDocuments(selectedId);
       await loadCompletion(selectedId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to upload document');
+      toastError(err.response?.data?.message || 'Failed to upload document');
     }
   }
 
@@ -313,11 +305,11 @@ export default function EmployeesPage() {
     }
     try {
       await api.put(`/employees/${selectedId}/documents/${documentId}/verify`, { status, remarks });
-      setMessage(`Document ${status}.`);
+      toastSuccess(`Document ${status}.`);
       await loadDocuments(selectedId);
       await loadCompletion(selectedId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update document');
+      toastError(err.response?.data?.message || 'Failed to update document');
     }
   }
 
@@ -326,12 +318,11 @@ export default function EmployeesPage() {
     if (!window.confirm('Delete this document?')) return;
     try {
       await api.delete(`/employees/${selectedId}/documents/${documentId}`);
-      setMessage('Document deleted successfully.');
-      setError('');
+      toastSuccess('Document deleted successfully.');
       await loadDocuments(selectedId);
       await loadCompletion(selectedId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete document');
+      toastError(err.response?.data?.message || 'Failed to delete document');
     }
   }
 
@@ -339,7 +330,7 @@ export default function EmployeesPage() {
     try {
       await openDocument(documentId, { userId: selectedId });
     } catch {
-      setError('Failed to open document');
+      toastError('Failed to open document');
     }
   }
 
@@ -351,11 +342,11 @@ export default function EmployeesPage() {
         templateKey: letterForm.templateKey,
         customValues: letterForm.customValues
       });
-      setMessage(`Letter generated (Ref ${data.referenceNo})${data.fallbackHtml ? ' — Puppeteer not installed, saved as HTML.' : ''}`);
+      toastSuccess(`Letter generated (Ref ${data.referenceNo})${data.fallbackHtml ? ' — Puppeteer not installed, saved as HTML.' : ''}`);
       setLetterForm({ templateKey: '', customValues: {} });
       await loadDocuments(selectedId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate letter');
+      toastError(err.response?.data?.message || 'Failed to generate letter');
     }
   }
 
@@ -366,12 +357,12 @@ export default function EmployeesPage() {
     }
     try {
       await api.put(`/profile/change-requests/${id}/review`, { decision, reviewNote });
-      setMessage(`Change request ${decision}.`);
+      toastSuccess(`Change request ${decision}.`);
       await loadChangeRequests();
       await loadData();
       if (selectedId) await loadCompletion(selectedId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to review change request');
+      toastError(err.response?.data?.message || 'Failed to review change request');
     }
   }
 
@@ -380,7 +371,6 @@ export default function EmployeesPage() {
       <AppLayout title="My Profile" description="Self-service profile view.">
         <section className="single-column-layout">
           <article className="card">
-            {error ? <div className="alert alert-error">{error}</div> : null}
             {!profile ? (
               <div className="empty-state">Loading profile...</div>
             ) : (
@@ -415,8 +405,6 @@ export default function EmployeesPage() {
           <div className="filter-toolbar">
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email, department..." />
           </div>
-          {error ? <div className="alert alert-error">{error}</div> : null}
-          {message ? <div className="alert alert-success">{message}</div> : null}
           <div className="list-stack selectable-list">
             {items.map((item) => (
               <button

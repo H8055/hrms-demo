@@ -2,27 +2,25 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function SetupAdminPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
-    setMessage('');
 
     if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      toastError('Password must be at least 8 characters.');
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
+      toastError('Passwords do not match.');
       return;
     }
 
@@ -36,10 +34,10 @@ export default function SetupAdminPage() {
       });
 
       await login({ email: form.email, password: form.password });
-      setMessage('First admin account created successfully. Redirecting...');
+      toastSuccess('First admin account created successfully. Redirecting...');
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not create the first admin account');
+      toastError(err.response?.data?.message || 'Could not create the first admin account');
     } finally {
       setSubmitting(false);
     }
@@ -64,9 +62,6 @@ export default function SetupAdminPage() {
             <h2>Setup admin</h2>
             <p>Create the initial administrator account.</p>
           </div>
-
-          {message ? <div className="alert alert-success">{message}</div> : null}
-          {error ? <div className="alert alert-error">{error}</div> : null}
 
           <label className="field">
             <span>Full name</span>

@@ -164,11 +164,11 @@ function createSupabaseProvider() {
       if (error) throw new Error(`Supabase delete failed: ${error.message}`);
     },
 
-    async signedUrl(relativePath) {
+    async signedUrl(relativePath, ttl) {
       const supabase = await getClient();
       const { data, error } = await supabase.storage
         .from(env.supabase.bucket)
-        .createSignedUrl(relativePath, env.supabase.signedUrlTtl);
+        .createSignedUrl(relativePath, ttl || env.supabase.signedUrlTtl);
 
       if (error) throw new Error(`Supabase signed URL failed: ${error.message}`);
       return data.signedUrl;
@@ -203,7 +203,7 @@ export async function removeDocument({ relativePath, storageProvider }) {
 
 // Returns a signed URL when the backend supports it (Spaces), else null so the
 // caller serves the file through the authenticated download route instead.
-export async function getDownloadUrl({ relativePath, storageProvider }) {
+export async function getDownloadUrl({ relativePath, storageProvider, ttl }) {
   const provider = getStorageProvider(storageProvider);
-  return provider.signedUrl(relativePath);
+  return provider.signedUrl(relativePath, ttl);
 }

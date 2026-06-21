@@ -51,7 +51,7 @@ export default function App() {
       <Route
         path="/profile/change-requests"
         element={
-          <ProtectedRoute anyPermissions={[{ module: 'employee', action: 'view' }]}>
+          <ProtectedRoute permission={{ module: 'change-requests', action: 'view' }}>
             <ChangeRequestsPage />
           </ProtectedRoute>
         }

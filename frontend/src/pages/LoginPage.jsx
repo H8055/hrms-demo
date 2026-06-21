@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { api } from '../api/client';
 
 function EyeIcon({ open }) {
@@ -24,12 +25,17 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [successMessage] = useState(location.state?.message || '');
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [bootstrap, setBootstrap] = useState({ loading: true, requiresSetup: false, apiReachable: true });
+
+  useEffect(() => {
+    const msg = location.state?.message;
+    if (msg) toastSuccess(msg);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     async function loadBootstrapStatus() {
@@ -51,13 +57,12 @@ export default function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setSubmitting(true);
-    setError('');
 
     try {
       await login(form);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      toastError(err.response?.data?.message || 'Login failed');
     } finally {
       setSubmitting(false);
     }
@@ -91,9 +96,6 @@ export default function LoginPage() {
               No users exist yet. <Link to="/setup-admin">Create the first admin account</Link> before logging in.
             </div>
           ) : null}
-
-          {successMessage ? <div className="alert alert-success">{successMessage}</div> : null}
-          {error ? <div className="alert alert-error">{error}</div> : null}
 
           <label className="field">
             <span>Email</span>

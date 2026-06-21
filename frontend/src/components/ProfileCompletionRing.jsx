@@ -9,21 +9,23 @@ export default function ProfileCompletionRing({ percent = 0, size = 132, stroke 
   const color = safePercent >= 100 ? '#16a34a' : safePercent >= 60 ? '#3b82f6' : '#f59e0b';
 
   return (
-    <svg width={size} height={size} className="completion-ring" role="img" aria-label={`${safePercent}% complete`}>
+    <svg width={size} height={size} className="completion-ring" role="img" aria-label={`${safePercent}% complete`} overflow="visible" style={{ display: 'block' }}>
       <circle cx={center} cy={center} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={stroke} />
-      <circle
-        cx={center}
-        cy={center}
-        r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth={stroke}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        transform={`rotate(-90 ${center} ${center})`}
-        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-      />
+      {safePercent > 0 && (
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${center} ${center})`}
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+        />
+      )}
       <text x="50%" y="46%" dominantBaseline="central" textAnchor="middle" className="completion-ring-value" fill={color}>
         {safePercent}%
       </text>

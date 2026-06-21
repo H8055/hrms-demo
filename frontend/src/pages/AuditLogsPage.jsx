@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
+import { useToast } from '../context/ToastContext';
 
 export default function AuditLogsPage() {
+  const { error: toastError } = useToast();
   const [items, setItems] = useState([]);
   const [entityType, setEntityType] = useState('');
   const [action, setAction] = useState('');
-  const [error, setError] = useState('');
 
   useEffect(() => {
     async function loadLogs() {
@@ -17,7 +18,7 @@ export default function AuditLogsPage() {
         const { data } = await api.get(`/audit-logs${params.toString() ? `?${params.toString()}` : ''}`);
         setItems(data.items || []);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load audit logs');
+        toastError(err.response?.data?.message || 'Failed to load audit logs');
       }
     }
 
@@ -50,8 +51,6 @@ export default function AuditLogsPage() {
               </label>
             </div>
           </div>
-
-          {error ? <div className="alert alert-error">{error}</div> : null}
 
           <div className="list-stack">
             {items.length === 0 ? <div className="empty-state">No audit logs found.</div> : items.map((item) => (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 function clonePermissions(input) {
   return JSON.parse(JSON.stringify(input || {}));
@@ -9,6 +10,7 @@ function clonePermissions(input) {
 
 export default function PermissionsPage() {
   const { hasPermission, refreshProfile } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const canEdit = hasPermission('permissions', 'edit');
   const [meta, setMeta] = useState({ roles: [], roleDetails: [], actions: [], modules: [] });
   const [activeRole, setActiveRole] = useState('admin');
@@ -17,12 +19,9 @@ export default function PermissionsPage() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
   async function loadData() {
     setLoading(true);
-    setError('');
 
     try {
       const { data } = await api.get('/permissions/roles');
@@ -32,7 +31,7 @@ export default function PermissionsPage() {
       setAuditLogs(data.auditLogs || []);
       setActiveRole((prev) => prev || data.meta?.roles?.[0] || 'admin');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load permission configuration');
+      toastError(err.response?.data?.message || 'Failed to load permission configuration');
     } finally {
       setLoading(false);
     }
@@ -62,8 +61,6 @@ export default function PermissionsPage() {
 
   async function saveRole(roleToSave = activeRole) {
     setSaving(true);
-    setMessage('');
-    setError('');
 
     try {
       await api.put('/permissions/bulk-update', {
@@ -71,10 +68,10 @@ export default function PermissionsPage() {
         permissions: permissionsByRole[roleToSave]
       });
       setSavedPermissionsByRole(clonePermissions(permissionsByRole));
-      setMessage(`Permissions saved for ${roleToSave}.`);
+      toastSuccess(`Permissions saved for ${roleToSave}.`);
       await Promise.all([loadData(), refreshProfile()]);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save permissions');
+      toastError(err.response?.data?.message || 'Failed to save permissions');
     } finally {
       setSaving(false);
     }
@@ -86,9 +83,6 @@ export default function PermissionsPage() {
       title="Permission Management"
       description="Configure which role can access each module, what actions they can perform, and whether the module appears in the sidebar."
     >
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
-
       {loading ? (
         <div className="empty-state">Loading permission matrix...</div>
       ) : (

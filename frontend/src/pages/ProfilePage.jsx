@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useToast } from '../context/ToastContext';
 import AppLayout from '../components/AppLayout';
 import ProfileCompletionRing from '../components/ProfileCompletionRing';
 import { api } from '../api/client';
@@ -17,19 +18,18 @@ function formatDate(value) {
 }
 
 export default function ProfilePage() {
+  const { success: toastSuccess, error: toastError } = useToast();
   const [profile, setProfile] = useState(null);
   const [completion, setCompletion] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
   const [uploadForm, setUploadForm] = useState({ category: 'kyc', subType: 'aadhaar', documentNumber: '', issueDate: '', expiryDate: '', file: null });
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [editValues, setEditValues] = useState({});
   const [editNote, setEditNote] = useState('');
 
   async function loadAll() {
-    setError('');
     try {
       const [profileRes, completionRes, docsRes, requestsRes] = await Promise.all([
         api.get('/employees/me'),
@@ -42,7 +42,7 @@ export default function ProfilePage() {
       setDocuments(docsRes.data.items || []);
       setRequests(requestsRes.data.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load profile');
+      toastError(err.response?.data?.message || 'Failed to load profile');
     }
   }
 
@@ -67,8 +67,6 @@ export default function ProfilePage() {
   async function submitUpload(event) {
     event.preventDefault();
     if (!uploadForm.file) return;
-    setMessage('');
-    setError('');
 
     const formData = new FormData();
     formData.append('file', uploadForm.file);
@@ -80,11 +78,11 @@ export default function ProfilePage() {
 
     try {
       await api.post('/employees/me/documents', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setMessage('Document uploaded. It is pending HR verification.');
+      toastSuccess('Document uploaded. It is pending HR verification.');
       setUploadForm({ category: 'kyc', subType: 'aadhaar', documentNumber: '', issueDate: '', expiryDate: '', file: null });
       await loadAll();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to upload document');
+      toastError(err.response?.data?.message || 'Failed to upload document');
     }
   }
 
@@ -92,33 +90,31 @@ export default function ProfilePage() {
     if (!window.confirm('Delete this document?')) return;
     try {
       await api.delete(`/employees/me/documents/${documentId}`);
-      setMessage('Document deleted.');
+      toastSuccess('Document deleted.');
       await loadAll();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete document');
+      toastError(err.response?.data?.message || 'Failed to delete document');
     }
   }
 
   async function submitChangeRequest(event) {
     event.preventDefault();
-    setMessage('');
-    setError('');
     const changes = {};
     Object.entries(editValues).forEach(([key, value]) => {
       if (value !== '' && value != null) changes[key] = value;
     });
     if (Object.keys(changes).length === 0) {
-      setError('Enter at least one field to request a change.');
+      toastError('Enter at least one field to request a change.');
       return;
     }
     try {
       await api.post('/profile/change-requests', { changes, note: editNote });
-      setMessage('Change request submitted for HR approval.');
+      toastSuccess('Change request submitted for HR approval.');
       setEditValues({});
       setEditNote('');
       await loadAll();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit change request');
+      toastError(err.response?.data?.message || 'Failed to submit change request');
     }
   }
 
@@ -126,7 +122,23 @@ export default function ProfilePage() {
     try {
       await openDocument(documentId, { self: true });
     } catch {
-      setError('Failed to open document');
+      toastError('Failed to open document');
+    }
+  }
+
+  async function uploadPhoto(file) {
+    if (!file) return;
+    setPhotoUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await api.post('/employees/me/photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setProfile((prev) => ({ ...prev, photoUrl: res.data.photoUrl }));
+      toastSuccess('Profile photo updated.');
+    } catch (err) {
+      toastError(err.response?.data?.message || 'Failed to upload photo');
+    } finally {
+      setPhotoUploading(false);
     }
   }
 
@@ -135,7 +147,7 @@ export default function ProfilePage() {
       <AppLayout title="My Profile" description="Self-service profile, documents, and KYC.">
         <section className="single-column-layout">
           <article className="card">
-            {error ? <div className="alert alert-error">{error}</div> : <div className="empty-state">Loading profile...</div>}
+            <div className="empty-state">Loading profile...</div>
           </article>
         </section>
       </AppLayout>
@@ -147,16 +159,38 @@ export default function ProfilePage() {
 
   return (
     <AppLayout title="My Profile" description="Self-service profile, documents, and KYC.">
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
-
       <section className="profile-header-card card">
         <div className="profile-identity">
-          {profile.photoUrl ? (
-            <img src={profile.photoUrl} alt={profile.name} className="profile-photo" />
-          ) : (
-            <div className="profile-photo placeholder">{profile.name?.[0]?.toUpperCase() || '?'}</div>
-          )}
+          {/* Clickable avatar — triggers hidden file input */}
+          <label
+            htmlFor="photo-upload-input"
+            title="Click to upload profile photo"
+            style={{ position: 'relative', cursor: 'pointer', display: 'inline-block', flexShrink: 0 }}
+          >
+            {profile.photoUrl && !photoUploading ? (
+              <img src={profile.photoUrl} alt={profile.name} className="profile-photo" />
+            ) : (
+              <div className="profile-photo placeholder" style={{ opacity: photoUploading ? 0.4 : 1 }}>
+                {photoUploading ? '…' : (profile.name?.[0]?.toUpperCase() || '?')}
+              </div>
+            )}
+            <span style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: '1.4rem',
+              opacity: 0, transition: 'opacity 0.15s',
+              pointerEvents: 'none'
+            }} className="photo-camera-overlay">
+              📷
+            </span>
+            <input
+              id="photo-upload-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              style={{ display: 'none' }}
+              onChange={(e) => uploadPhoto(e.target.files?.[0])}
+            />
+          </label>
           <div>
             <h2>{profile.name}</h2>
             <p className="muted-label">{profile.designation || '—'} · {profile.department || '—'}</p>

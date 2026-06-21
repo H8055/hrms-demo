@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const initialForm = {
   userId: '',
@@ -13,13 +14,12 @@ const initialForm = {
 
 export default function PerformancePage() {
   const { hasPermission } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const canManage = hasPermission('performance', 'create') || hasPermission('performance', 'approve') || hasPermission('performance', 'edit');
   const [summary, setSummary] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [form, setForm] = useState(initialForm);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
   async function loadData() {
     try {
@@ -30,7 +30,7 @@ export default function PerformancePage() {
       setReviews(reviewsRes.data.items || []);
       setEmployees(employeesRes?.data?.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load performance data');
+      toastError(err.response?.data?.message || 'Failed to load performance data');
     }
   }
 
@@ -45,12 +45,11 @@ export default function PerformancePage() {
         ...form,
         goals: form.goals.split('\n').map((item) => item.trim()).filter(Boolean)
       });
-      setMessage('Performance review saved.');
-      setError('');
+      toastSuccess('Performance review saved.');
       setForm(initialForm);
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save performance review');
+      toastError(err.response?.data?.message || 'Failed to save performance review');
     }
   }
 
@@ -60,9 +59,6 @@ export default function PerformancePage() {
         <div className="stat-card"><p>Total reviews</p><h3>{summary?.totalReviews ?? 0}</h3><small>Visible performance reviews</small></div>
         <div className="stat-card"><p>Average rating</p><h3>{summary?.averageRating ?? 0}</h3><small>Across visible reviews</small></div>
       </section>
-
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
 
       <section className="split-layout">
         <article className="card">

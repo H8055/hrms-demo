@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const initialStructure = {
   userId: '',
@@ -14,6 +15,7 @@ const initialStructure = {
 
 export default function PayrollPage() {
   const { user, hasPermission } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const canManage = hasPermission('payroll', 'edit') || hasPermission('payroll', 'create') || hasPermission('payroll', 'approve');
   const [summary, setSummary] = useState(null);
   const [employees, setEmployees] = useState([]);
@@ -21,8 +23,6 @@ export default function PayrollPage() {
   const [payrolls, setPayrolls] = useState([]);
   const [structureForm, setStructureForm] = useState(initialStructure);
   const [runMonth, setRunMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
   async function loadData() {
     try {
@@ -37,7 +37,7 @@ export default function PayrollPage() {
       setEmployees(employeesRes?.data?.items || []);
       setStructures(structuresRes?.data?.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load payroll data');
+      toastError(err.response?.data?.message || 'Failed to load payroll data');
     }
   }
 
@@ -59,34 +59,31 @@ export default function PayrollPage() {
     event.preventDefault();
     try {
       await api.post('/payroll/structures', structureForm);
-      setMessage('Salary structure saved.');
-      setError('');
+      toastSuccess('Salary structure saved.');
       setStructureForm(initialStructure);
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save salary structure');
+      toastError(err.response?.data?.message || 'Failed to save salary structure');
     }
   }
 
   async function runPayroll() {
     try {
       await api.post('/payroll/run', { month: runMonth });
-      setMessage('Payroll run completed.');
-      setError('');
+      toastSuccess('Payroll run completed.');
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to run payroll');
+      toastError(err.response?.data?.message || 'Failed to run payroll');
     }
   }
 
   async function markPaid(id) {
     try {
       await api.put(`/payroll/${id}/pay`);
-      setMessage('Payroll marked as paid.');
-      setError('');
+      toastSuccess('Payroll marked as paid.');
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to mark payroll as paid');
+      toastError(err.response?.data?.message || 'Failed to mark payroll as paid');
     }
   }
 
@@ -102,9 +99,6 @@ export default function PayrollPage() {
         <div className="stat-card"><p>Draft</p><h3>{summary?.draftCount ?? 0}</h3><small>Awaiting payment</small></div>
         <div className="stat-card"><p>Total net pay</p><h3>₹{(summary?.totalNetPay ?? 0).toLocaleString('en-IN')}</h3><small>Across visible payrolls</small></div>
       </section>
-
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
 
       <section className="two-column-layout">
         <article className="card card-elevated">

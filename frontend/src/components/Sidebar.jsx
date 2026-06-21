@@ -5,7 +5,7 @@ const links = [
   { to: '/', label: 'Dashboard', icon: '◫', module: 'dashboard', action: 'view', hint: 'Overview and KPIs' },
   { to: '/profile', label: 'My Profile', icon: '🧑', always: true, hint: 'Your profile & documents' },
   { to: '/employees', label: 'Employees', icon: '👥', module: 'employee', action: 'view', hint: 'Profiles and org chart' },
-  { to: '/profile/change-requests', label: 'Change Requests', icon: '✏', module: 'employee', action: 'view', hint: 'Review employee profile update requests' },
+  { to: '/profile/change-requests', label: 'Change Requests', icon: '✏', module: 'change-requests', action: 'view', hint: 'Review employee profile update requests' },
   { to: '/attendance', label: 'Attendance', icon: '⏱', module: 'attendance', action: 'view', hint: 'Check-in and regularization' },
   { to: '/leaves', label: 'Leave', icon: '🗓', module: 'leave', action: 'view', hint: 'Balances and approvals' },
   { to: '/advances/request', label: 'Request Advance', icon: '₹', module: 'advance', action: 'create', hint: 'Create advance request' },

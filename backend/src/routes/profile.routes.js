@@ -4,7 +4,7 @@ import {
   reviewChangeRequest,
   submitChangeRequest
 } from '../controllers/changeRequest.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authorize, checkPermission } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.use(authenticate);
 router.post('/change-requests', submitChangeRequest);
 router.get('/change-requests', listChangeRequests);
 
-// Only HR / admin can approve or reject.
-router.put('/change-requests/:id/review', authorize('hr', 'admin'), reviewChangeRequest);
+// Only roles with change-requests edit permission can approve or reject.
+router.put('/change-requests/:id/review', checkPermission('change-requests', 'edit'), reviewChangeRequest);
 
 export default router;

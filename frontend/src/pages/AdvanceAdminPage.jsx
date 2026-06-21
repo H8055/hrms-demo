@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 function buildCsv(items) {
   const headers = ['Employee', 'Email', 'Amount', 'Status', 'Requested On', 'Repayment Plan', 'Reason', 'Paid On'];
@@ -59,6 +60,7 @@ function ActivityLog({ items }) {
 
 export default function AdvanceAdminPage() {
   const { hasPermission } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const canApprove = hasPermission('advance', 'approve');
   const canPay = hasPermission('advance', 'pay');
   const [items, setItems] = useState([]);
@@ -66,8 +68,6 @@ export default function AdvanceAdminPage() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [detail, setDetail] = useState(null);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [approvalNote, setApprovalNote] = useState('');
@@ -81,7 +81,6 @@ export default function AdvanceAdminPage() {
 
   async function loadItems() {
     setLoading(true);
-    setError('');
     try {
       const params = new URLSearchParams();
       params.set('limit', '50');
@@ -98,7 +97,7 @@ export default function AdvanceAdminPage() {
         setSelectedId(nextItems[0]?.id || '');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load requests');
+      toastError(err.response?.data?.message || 'Failed to load requests');
     } finally {
       setLoading(false);
     }
@@ -123,7 +122,7 @@ export default function AdvanceAdminPage() {
         reference: data.advance?.reference || ''
       }));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load request detail');
+      toastError(err.response?.data?.message || 'Failed to load request detail');
     } finally {
       setDetailLoading(false);
     }
@@ -190,40 +189,34 @@ export default function AdvanceAdminPage() {
 
   async function approve() {
     if (!selectedId) return;
-    setError('');
-    setMessage('');
     try {
       await api.put(`/advances/${selectedId}/approve`, { note: approvalNote });
-      setMessage('Request approved successfully. It is now available in the payout queue for roles with payout access.');
+      toastSuccess('Request approved successfully. It is now available in the payout queue for roles with payout access.');
       await refreshCurrentState();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to approve request');
+      toastError(err.response?.data?.message || 'Failed to approve request');
     }
   }
 
   async function reject() {
     if (!selectedId) return;
-    setError('');
-    setMessage('');
     try {
       await api.put(`/advances/${selectedId}/reject`, { rejectionReason });
-      setMessage('Request rejected successfully. Employee notification has been created.');
+      toastSuccess('Request rejected successfully. Employee notification has been created.');
       await refreshCurrentState();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to reject request');
+      toastError(err.response?.data?.message || 'Failed to reject request');
     }
   }
 
   async function markPaid() {
     if (!selectedId) return;
-    setError('');
-    setMessage('');
     try {
       await api.put(`/advances/${selectedId}/pay`, paymentForm);
-      setMessage('Payment recorded successfully by payout queue role and history log updated.');
+      toastSuccess('Payment recorded successfully by payout queue role and history log updated.');
       await refreshCurrentState();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to mark request as paid');
+      toastError(err.response?.data?.message || 'Failed to mark request as paid');
     }
   }
 
@@ -255,9 +248,6 @@ export default function AdvanceAdminPage() {
           <small>Reason captured</small>
         </div>
       </section>
-
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
 
       <section className="two-column-layout">
         <article className="card card-elevated">

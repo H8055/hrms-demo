@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
+import { useToast } from '../context/ToastContext';
 
 export default function ReportsPage() {
+  const { error: toastError } = useToast();
   const [report, setReport] = useState(null);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     async function loadReport() {
@@ -12,7 +13,7 @@ export default function ReportsPage() {
         const { data } = await api.get('/reports/overview');
         setReport(data);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load reports');
+        toastError(err.response?.data?.message || 'Failed to load reports');
       }
     }
     loadReport();
@@ -24,7 +25,6 @@ export default function ReportsPage() {
       title="Reports & Overview"
       description="Cross-module reporting surface for leaders, with a cleaner production-style summary of employees, attendance, leave, payroll, and advances."
     >
-      {error ? <div className="alert alert-error">{error}</div> : null}
       {!report ? (
         <div className="empty-state">Loading report...</div>
       ) : (

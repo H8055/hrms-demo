@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
+import { useToast } from '../context/ToastContext';
 
 function EyeIcon({ open }) {
   if (open) {
@@ -48,9 +49,8 @@ function PasswordField({ label, value, onChange, placeholder, autoComplete }) {
 }
 
 export default function ChangePasswordPage() {
+  const { success: toastSuccess, error: toastError } = useToast();
   const [form, setForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   function setField(key, value) {
@@ -59,18 +59,17 @@ export default function ChangePasswordPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
 
     if (form.newPassword === form.oldPassword) {
-      setError('New password must be different from the current password.');
+      toastError('New password must be different from the current password.');
       return;
     }
     if (form.newPassword !== form.confirmPassword) {
-      setError('New password and confirm password do not match.');
+      toastError('New password and confirm password do not match.');
       return;
     }
     if (form.newPassword.length < 8) {
-      setError('New password must be at least 8 characters.');
+      toastError('New password must be at least 8 characters.');
       return;
     }
 
@@ -81,13 +80,13 @@ export default function ChangePasswordPage() {
         newPassword: form.newPassword
       });
       localStorage.removeItem('hrms_access_token');
-      setSuccess(true);
+      toastSuccess('Password changed successfully.');
       // Hard reload to /login — clears React auth state so the login guard doesn't bounce back
       setTimeout(() => {
         window.location.replace('/login');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to change password');
+      toastError(err.response?.data?.message || 'Failed to change password');
       setSubmitting(false);
     }
   }
@@ -96,13 +95,6 @@ export default function ChangePasswordPage() {
     <AppLayout eyebrow="Account" title="Change Password" description="Update your login password.">
       <div className="form-page-layout">
         <form className="card form-card" onSubmit={handleSubmit}>
-          {success ? (
-            <div className="alert alert-success">
-              Password changed successfully! Redirecting to login...
-            </div>
-          ) : null}
-          {error ? <div className="alert alert-error">{error}</div> : null}
-
           <PasswordField
             label="Current Password"
             value={form.oldPassword}
@@ -128,16 +120,14 @@ export default function ChangePasswordPage() {
           />
 
           <div className="form-actions">
-            <button className="primary-button" type="submit" disabled={submitting || success}>
-              {submitting ? 'Saving...' : success ? 'Redirecting...' : 'Save Password'}
+            <button className="primary-button" type="submit" disabled={submitting}>
+              {submitting ? 'Saving...' : 'Save Password'}
             </button>
           </div>
 
-          {!success ? (
-            <p className="helper-text">
-              After saving, you will be logged out and must sign in with your new password.
-            </p>
-          ) : null}
+          <p className="helper-text">
+            After saving, you will be logged out and must sign in with your new password.
+          </p>
         </form>
       </div>
     </AppLayout>

@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
 export default function AttendancePage() {
   const { hasPermission } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const canApprove = hasPermission('attendance', 'approve');
   const canExport = hasPermission('attendance', 'export');
   const [summary, setSummary] = useState(null);
@@ -14,8 +16,6 @@ export default function AttendancePage() {
   const [myItems, setMyItems] = useState([]);
   const [adminItems, setAdminItems] = useState([]);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), reason: '', requestedCheckIn: '', requestedCheckOut: '' });
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
   async function loadSupportData() {
     try {
@@ -35,7 +35,7 @@ export default function AttendancePage() {
       setMyItems(mineRes.data.items || []);
       setAdminItems(adminRes?.data?.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load attendance');
+      toastError(err.response?.data?.message || 'Failed to load attendance');
     }
   }
 
@@ -55,22 +55,20 @@ export default function AttendancePage() {
   async function doCheckIn() {
     try {
       await api.post('/attendance/check-in');
-      setMessage('Checked in successfully.');
-      setError('');
+      toastSuccess('Checked in successfully.');
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Check-in failed');
+      toastError(err.response?.data?.message || 'Check-in failed');
     }
   }
 
   async function doCheckOut() {
     try {
       await api.post('/attendance/check-out');
-      setMessage('Checked out successfully.');
-      setError('');
+      toastSuccess('Checked out successfully.');
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Check-out failed');
+      toastError(err.response?.data?.message || 'Check-out failed');
     }
   }
 
@@ -78,12 +76,11 @@ export default function AttendancePage() {
     event.preventDefault();
     try {
       await api.post('/attendance/regularize', form);
-      setMessage('Regularization submitted.');
-      setError('');
+      toastSuccess('Regularization submitted.');
       setForm({ date: new Date().toISOString().slice(0, 10), reason: '', requestedCheckIn: '', requestedCheckOut: '' });
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit regularization');
+      toastError(err.response?.data?.message || 'Failed to submit regularization');
     }
   }
 
@@ -91,11 +88,10 @@ export default function AttendancePage() {
     const comment = window.prompt(`Optional comment for ${decision}`) || '';
     try {
       await api.put(`/attendance/${id}/regularization-decision`, { decision, comment });
-      setMessage(`Regularization ${decision}.`);
-      setError('');
+      toastSuccess(`Regularization ${decision}.`);
       loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update regularization');
+      toastError(err.response?.data?.message || 'Failed to update regularization');
     }
   }
 
@@ -111,9 +107,6 @@ export default function AttendancePage() {
         <div className="stat-card"><p>Absent</p><h3>{summary?.absent ?? 0}</h3><small>No attendance or rejected regularization</small></div>
         <div className="stat-card"><p>Pending regularization</p><h3>{summary?.pendingRegularization ?? 0}</h3><small>Awaiting review</small></div>
       </section>
-
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
 
       <section className="split-layout">
         <article className="card">

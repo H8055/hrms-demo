@@ -11,8 +11,10 @@ import {
   getEmployeeById,
   getEmployeeCompletion,
   getMyEmployeeProfile,
+  updateMyPhoto,
   getOrgChart,
   importEmployeesCsv,
+  listAllDocuments,
   listEmployeeDocuments,
   listEmployees,
   updateEmployee,
@@ -34,6 +36,7 @@ function asSelf(req, _res, next) {
 router.use(authenticate);
 
 router.get('/me', getMyEmployeeProfile); // own profile — no module permission needed, just auth
+router.post('/me/photo', upload.single('file'), updateMyPhoto);
 
 // Self-service (own profile only) — controller enforces ownership.
 router.get('/me/completion', asSelf, getEmployeeCompletion);
@@ -41,6 +44,9 @@ router.get('/me/documents', asSelf, listEmployeeDocuments);
 router.post('/me/documents', asSelf, upload.single('file'), uploadEmployeeDocument);
 router.get('/me/documents/:documentId/download', asSelf, downloadEmployeeDocument);
 router.delete('/me/documents/:documentId', asSelf, deleteEmployeeDocument);
+
+// Roles with change-requests view permission: all documents for the verification queue.
+router.get('/documents/all', checkPermission('change-requests', 'view'), listAllDocuments);
 
 router.get('/org-chart', checkPermission('employee', 'view'), getOrgChart);
 router.get('/export/csv', checkPermission('employee', 'export'), exportEmployeesCsv);

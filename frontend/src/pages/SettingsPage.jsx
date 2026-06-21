@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const generalDefaults = {
   companyName: '',
@@ -45,6 +46,7 @@ function prettyMetadata(value) {
 
 export default function SettingsPage() {
   const { hasPermission } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
   const canEdit = hasPermission('settings', 'edit');
   const [activeTab, setActiveTab] = useState('general');
   const [form, setForm] = useState(generalDefaults);
@@ -53,8 +55,6 @@ export default function SettingsPage() {
   const [masterData, setMasterData] = useState({});
   const [roleForm, setRoleForm] = useState(roleDefaults);
   const [masterForm, setMasterForm] = useState(masterDefaults);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   async function loadBundle() {
@@ -80,7 +80,7 @@ export default function SettingsPage() {
         setMasterForm((prev) => ({ ...prev, category: data.categories[0] }));
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load settings bundle');
+      toastError(err.response?.data?.message || 'Failed to load settings bundle');
     } finally {
       setLoading(false);
     }
@@ -118,11 +118,10 @@ export default function SettingsPage() {
           payoutDepartments: form.advancePayoutDepartments
         }
       });
-      setMessage('General settings saved successfully.');
-      setError('');
+      toastSuccess('General settings saved successfully.');
       loadBundle();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save settings');
+      toastError(err.response?.data?.message || 'Failed to save settings');
     }
   }
 
@@ -139,17 +138,16 @@ export default function SettingsPage() {
 
       if (roleForm.id) {
         await api.put(`/settings/roles/${roleForm.id}`, payload);
-        setMessage('Role updated successfully.');
+        toastSuccess('Role updated successfully.');
       } else {
         await api.post('/settings/roles', payload);
-        setMessage('Role created successfully.');
+        toastSuccess('Role created successfully.');
       }
 
-      setError('');
       setRoleForm(roleDefaults);
       await loadBundle();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save role');
+      toastError(err.response?.data?.message || 'Failed to save role');
     }
   }
 
@@ -173,17 +171,16 @@ export default function SettingsPage() {
 
       if (masterForm.id) {
         await api.put(`/settings/masters/${masterForm.id}`, payload);
-        setMessage('Master data item updated successfully.');
+        toastSuccess('Master data item updated successfully.');
       } else {
         await api.post('/settings/masters', payload);
-        setMessage('Master data item created successfully.');
+        toastSuccess('Master data item created successfully.');
       }
 
-      setError('');
       setMasterForm((prev) => ({ ...masterDefaults, category: prev.category }));
       await loadBundle();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save master data item');
+      toastError(err.response?.data?.message || 'Failed to save master data item');
     }
   }
 
@@ -219,9 +216,6 @@ export default function SettingsPage() {
       title="Settings & Master Data"
       description="Manage company settings, dynamic roles, and reusable HRMS master data from one UI. This is the control layer behind forms, permissions, and operational dropdowns."
     >
-      {error ? <div className="alert alert-error">{error}</div> : null}
-      {message ? <div className="alert alert-success">{message}</div> : null}
-
       {loading ? (
         <div className="empty-state">Loading settings...</div>
       ) : (

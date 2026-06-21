@@ -1,33 +1,31 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
+import { useToast } from '../context/ToastContext';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = useMemo(() => searchParams.get('token') || '', [searchParams]);
+  const { success: toastSuccess, error: toastError } = useToast();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
-    setMessage('');
 
     if (!token) {
-      setError('Reset token is missing from the URL.');
+      toastError('Reset token is missing from the URL.');
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
+      toastError('Password must be at least 8 characters long.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      toastError('Passwords do not match.');
       return;
     }
 
@@ -35,11 +33,11 @@ export default function ResetPasswordPage() {
 
     try {
       const { data } = await api.post('/auth/reset-password', { token, password });
-      setMessage(data.message || 'Password reset successful.');
+      toastSuccess(data.message || 'Password reset successful.');
       setPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not reset password');
+      toastError(err.response?.data?.message || 'Could not reset password');
     } finally {
       setSubmitting(false);
     }
@@ -61,9 +59,6 @@ export default function ResetPasswordPage() {
             <h2>Reset password</h2>
             <p>Use the reset token from your email link.</p>
           </div>
-
-          {message ? <div className="alert alert-success">{message}</div> : null}
-          {error ? <div className="alert alert-error">{error}</div> : null}
 
           <label className="field">
             <span>New password</span>

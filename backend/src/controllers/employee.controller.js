@@ -98,7 +98,11 @@ function mapDocument(item) {
           name: item.uploadedBy.name,
           email: item.uploadedBy.email
         }
-      : null
+      : null,
+    // Included when listing across all employees (HR verification queue).
+    user: item.user?._id
+      ? { id: item.user._id, name: item.user.name, email: item.user.email, department: item.user.department, employeeCode: item.user.employeeCode }
+      : item.user
   };
 }
 
@@ -287,6 +291,37 @@ export const importEmployeesCsv = asyncHandler(async (req, res) => {
     createdCount: createdEmployees.length,
     skipped
   });
+});
+
+export const updateMyPhoto = asyncHandler(async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'No image file provided' });
+
+  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!allowed.includes(req.file.mimetype)) {
+    return res.status(400).json({ message: 'File must be jpeg, png, or webp' });
+  }
+  if (req.file.size > 5 * 1024 * 1024) {
+    return res.status(400).json({ message: 'Photo must be under 5 MB' });
+  }
+
+  const userId = req.user._id.toString();
+  const ext = req.file.mimetype === 'image/jpeg' ? 'jpg' : req.file.mimetype.split('/')[1];
+
+  const { relativePath, storageProvider } = await saveDocument({
+    buffer: req.file.buffer,
+    employeeId: userId,
+    originalName: `profile.${ext}`,
+    mimeType: req.file.mimetype,
+    timestamp: Date.now()
+  });
+
+  // 1-year signed URL so the photo stays accessible without repeated refreshes.
+  const ONE_YEAR_SECS = 365 * 24 * 60 * 60;
+  const photoUrl = await getDownloadUrl({ relativePath, storageProvider, ttl: ONE_YEAR_SECS });
+
+  await User.findByIdAndUpdate(userId, { photoUrl: photoUrl || relativePath });
+
+  res.json({ photoUrl: photoUrl || relativePath });
 });
 
 export const getMyEmployeeProfile = asyncHandler(async (req, res) => {
@@ -491,6 +526,21 @@ export const deactivateEmployee = asyncHandler(async (req, res) => {
 function isOwner(req) {
   return req.params.id === req.user._id.toString();
 }
+
+// HR/admin: list all documents across employees, optionally filtered by status.
+export const listAllDocuments = asyncHandler(async (req, res) => {
+  const query = {};
+  if (req.query.status) query.status = req.query.status;
+  if (req.query.category) query.category = req.query.category;
+
+  const items = await EmployeeDocument.find(query)
+    .sort({ createdAt: -1 })
+    .populate('user', 'name email employeeCode department')
+    .populate('uploadedBy', 'name')
+    .populate('verifiedBy', 'name');
+
+  res.json({ items: items.map(mapDocument) });
+});
 
 export const listEmployeeDocuments = asyncHandler(async (req, res) => {
   const owner = isOwner(req);
