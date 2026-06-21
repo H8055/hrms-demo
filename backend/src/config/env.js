@@ -17,5 +17,22 @@ export const env = {
   smtpPass: process.env.SMTP_PASS || '',
   smtpFrom: process.env.SMTP_FROM || 'no-reply@hrms.local',
   authRateLimitWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000),
-  authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX || 100)
+  authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX || 100),
+  // Document storage: 'local' | 'supabase' | 'spaces'
+  storageProvider: process.env.STORAGE_PROVIDER || 'local',
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
+    bucket: process.env.SUPABASE_BUCKET || 'employee-documents',
+    // seconds a signed download URL stays valid
+    signedUrlTtl: Number(process.env.SUPABASE_SIGNED_URL_TTL || 300)
+  },
+  spaces: {
+    endpoint: process.env.SPACES_ENDPOINT || '',
+    region: process.env.SPACES_REGION || '',
+    bucket: process.env.SPACES_BUCKET || '',
+    key: process.env.SPACES_KEY || '',
+    secret: process.env.SPACES_SECRET || '',
+    signedUrlTtl: Number(process.env.SPACES_SIGNED_URL_TTL || 300)
+  }
 };

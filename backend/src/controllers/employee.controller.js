@@ -1,7 +1,4 @@
 import bcrypt from 'bcryptjs';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { validationResult } from 'express-validator';
 import { EmployeeDocument } from '../models/EmployeeDocument.js';
 import { User } from '../models/User.js';
@@ -9,13 +6,17 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { sendMail } from '../services/mail.service.js';
 import { getDefaultRoleKey, roleExists } from '../services/role.service.js';
+import { createNotification } from '../services/notification.service.js';
+import { saveDocument, readDocument, removeDocument, getDownloadUrl } from '../services/storage.service.js';
+import { refreshCompletion, computeCompletion } from '../services/completion.service.js';
+import { canAccessCategory, visibleCategoriesForRole, SENSITIVE_NUMBER_SUBTYPES } from '../config/employeeProfile.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsBaseDir = path.resolve(__dirname, '../../uploads/employee-documents');
-
-async function ensureUploadsDir() {
-  await fs.mkdir(uploadsBaseDir, { recursive: true });
+// Masks a regulated identifier, keeping only the last 4 characters visible.
+function maskNumber(value) {
+  if (!value) return '';
+  const trimmed = String(value).trim();
+  if (trimmed.length <= 4) return '••••';
+  return `${'•'.repeat(Math.max(4, trimmed.length - 4))}${trimmed.slice(-4)}`;
 }
 
 function validationErrorResult(req, res) {
@@ -39,9 +40,18 @@ function mapEmployee(user) {
     phone: user.phone,
     address: user.address,
     joiningDate: user.joiningDate,
+    confirmationDate: user.confirmationDate,
+    probationStatus: user.probationStatus,
     employmentStatus: user.employmentStatus,
+    photoUrl: user.photoUrl,
+    dateOfBirth: user.dateOfBirth,
+    gender: user.gender,
+    bloodGroup: user.bloodGroup,
+    maritalStatus: user.maritalStatus,
+    location: user.location,
     emergencyContactName: user.emergencyContactName,
     emergencyContactPhone: user.emergencyContactPhone,
+    profileCompletion: user.profileCompletion,
     leaveBalances: user.leaveBalances,
     bankDetails: user.bankDetails,
     manager: user.manager
@@ -61,11 +71,26 @@ function mapDocument(item) {
   return {
     id: item._id,
     category: item.category,
+    subType: item.subType,
     originalName: item.originalName,
     mimeType: item.mimeType,
     size: item.size,
-    relativePath: item.relativePath,
-    downloadUrl: `/uploads/${item.relativePath}`,
+    documentNumber: SENSITIVE_NUMBER_SUBTYPES.includes(item.subType)
+      ? maskNumber(item.documentNumber)
+      : item.documentNumber,
+    issueDate: item.issueDate,
+    expiryDate: item.expiryDate,
+    status: item.status,
+    remarks: item.remarks,
+    version: item.version,
+    isCurrent: item.isCurrent,
+    generatedLetter: item.generatedLetter,
+    // Confidential files are streamed through an authenticated API route — no public URL.
+    downloadUrl: `/api/employees/${item.user}/documents/${item._id}/download`,
+    verifiedBy: item.verifiedBy
+      ? { id: item.verifiedBy._id, name: item.verifiedBy.name }
+      : null,
+    verifiedAt: item.verifiedAt,
     uploadedAt: item.createdAt,
     uploadedBy: item.uploadedBy
       ? {
@@ -265,6 +290,9 @@ export const importEmployeesCsv = asyncHandler(async (req, res) => {
 });
 
 export const getMyEmployeeProfile = asyncHandler(async (req, res) => {
+  // Keep the cached completion snapshot fresh for the self-service view.
+  await refreshCompletion(req.user._id, { notifyOnDrop: false });
+
   const user = await User.findById(req.user._id)
     .select('-passwordHash -refreshToken -resetTokenHash -resetTokenExpiresAt')
     .populate('manager', 'name email designation');
@@ -373,7 +401,15 @@ export const updateEmployee = asyncHandler(async (req, res) => {
     'employeeCode',
     'phone',
     'address',
+    'photoUrl',
+    'dateOfBirth',
+    'gender',
+    'bloodGroup',
+    'maritalStatus',
+    'location',
     'joiningDate',
+    'confirmationDate',
+    'probationStatus',
     'manager',
     'employmentStatus',
     'emergencyContactName',
@@ -413,6 +449,9 @@ export const updateEmployee = asyncHandler(async (req, res) => {
 
   await employee.save();
 
+  // Recompute completion since profile fields may have changed.
+  await refreshCompletion(employee._id);
+
   await writeAuditLog({
     actor: req.user._id,
     action: 'employee.updated',
@@ -449,8 +488,13 @@ export const deactivateEmployee = asyncHandler(async (req, res) => {
   res.json({ message: 'Employee marked as exited' });
 });
 
+function isOwner(req) {
+  return req.params.id === req.user._id.toString();
+}
+
 export const listEmployeeDocuments = asyncHandler(async (req, res) => {
-  if (!DIRECTORY_ROLES.includes(req.user.role) && req.params.id !== req.user._id.toString()) {
+  const owner = isOwner(req);
+  if (!DIRECTORY_ROLES.includes(req.user.role) && !owner && req.user.role !== 'accounts') {
     return res.status(403).json({ message: 'You can only access your own documents' });
   }
 
@@ -459,9 +503,17 @@ export const listEmployeeDocuments = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Employee not found' });
   }
 
-  const items = await EmployeeDocument.find({ user: employee._id })
-    .sort({ createdAt: -1 })
-    .populate('uploadedBy', 'name email');
+  const query = { user: employee._id };
+  // Non-owners only see categories their role is allowed to view (e.g. accounts -> salary).
+  if (!owner) {
+    const categories = visibleCategoriesForRole(req.user.role);
+    query.category = { $in: categories };
+  }
+
+  const items = await EmployeeDocument.find(query)
+    .sort({ isCurrent: -1, createdAt: -1 })
+    .populate('uploadedBy', 'name email')
+    .populate('verifiedBy', 'name');
 
   res.json({ items: items.map(mapDocument) });
 });
@@ -476,39 +528,155 @@ export const uploadEmployeeDocument = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'file is required' });
   }
 
-  await ensureUploadsDir();
+  const category = req.body.category || 'general';
+  const subType = req.body.subType || (category === 'general' ? 'general' : '');
 
-  const timestamp = Date.now();
-  const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const storedName = `${timestamp}-${safeName}`;
-  const employeeDir = path.join(uploadsBaseDir, employee._id.toString());
-  await fs.mkdir(employeeDir, { recursive: true });
+  const stored = await saveDocument({
+    buffer: req.file.buffer,
+    employeeId: employee._id.toString(),
+    originalName: req.file.originalname,
+    mimeType: req.file.mimetype,
+    timestamp: Date.now()
+  });
 
-  const destination = path.join(employeeDir, storedName);
-  await fs.writeFile(destination, req.file.buffer);
+  // Replace flow: supersede the current document of the same category+subType.
+  let version = 1;
+  if (req.body.replace === 'true' && subType) {
+    const previous = await EmployeeDocument.findOne({
+      user: employee._id,
+      category,
+      subType,
+      isCurrent: true
+    }).sort({ version: -1 });
+    if (previous) {
+      previous.isCurrent = false;
+      await previous.save();
+      version = previous.version + 1;
+    }
+  }
 
-  const relativePath = path.posix.join('employee-documents', employee._id.toString(), storedName);
   const document = await EmployeeDocument.create({
     user: employee._id,
-    category: req.body.category || 'general',
+    category,
+    subType,
     originalName: req.file.originalname,
-    storedName,
+    storedName: stored.storedName,
     mimeType: req.file.mimetype,
     size: req.file.size,
-    relativePath,
+    relativePath: stored.relativePath,
+    storageProvider: stored.storageProvider,
+    documentNumber: req.body.documentNumber || '',
+    issueDate: req.body.issueDate || null,
+    expiryDate: req.body.expiryDate || null,
+    version,
+    isCurrent: true,
     uploadedBy: req.user._id
   });
+
+  await refreshCompletion(employee._id);
 
   await writeAuditLog({
     actor: req.user._id,
     action: 'employee.document.uploaded',
     entityType: 'EmployeeDocument',
     entityId: document._id,
-    metadata: { userId: employee._id.toString(), category: document.category }
+    metadata: { userId: employee._id.toString(), category: document.category, subType }
   });
+
+  // Notify the employee a new document was added (unless they uploaded it themselves).
+  if (!isOwner(req)) {
+    await createNotification({
+      recipient: employee._id,
+      type: 'document.uploaded',
+      title: 'New document added',
+      message: `A ${subType || category} document was uploaded to your profile.`,
+      link: '/profile',
+      relatedEntityType: 'EmployeeDocument',
+      relatedEntityId: document._id
+    });
+  }
 
   const saved = await EmployeeDocument.findById(document._id).populate('uploadedBy', 'name email');
   res.status(201).json({ message: 'Document uploaded successfully', document: mapDocument(saved) });
+});
+
+export const downloadEmployeeDocument = asyncHandler(async (req, res) => {
+  const document = await EmployeeDocument.findOne({ _id: req.params.documentId, user: req.params.id });
+  if (!document) {
+    return res.status(404).json({ message: 'Document not found' });
+  }
+
+  const owner = isOwner(req);
+  if (!canAccessCategory(req.user.role, document.category, owner)) {
+    return res.status(403).json({ message: 'You do not have access to this document' });
+  }
+
+  // Prefer a signed URL when the storage backend supports it (Spaces).
+  const signedUrl = await getDownloadUrl({ relativePath: document.relativePath, storageProvider: document.storageProvider });
+
+  await writeAuditLog({
+    actor: req.user._id,
+    action: 'employee.document.viewed',
+    entityType: 'EmployeeDocument',
+    entityId: document._id,
+    metadata: { userId: req.params.id, category: document.category }
+  });
+
+  if (signedUrl) {
+    return res.json({ url: signedUrl });
+  }
+
+  const buffer = await readDocument({ relativePath: document.relativePath, storageProvider: document.storageProvider });
+  res.setHeader('Content-Type', document.mimeType);
+  res.setHeader('Content-Disposition', `inline; filename="${document.originalName}"`);
+  res.send(buffer);
+});
+
+export const verifyEmployeeDocument = asyncHandler(async (req, res) => {
+  const { status, remarks } = req.body;
+  if (!['verified', 'rejected'].includes(status)) {
+    return res.status(400).json({ message: 'status must be "verified" or "rejected"' });
+  }
+
+  const document = await EmployeeDocument.findOne({ _id: req.params.documentId, user: req.params.id });
+  if (!document) {
+    return res.status(404).json({ message: 'Document not found' });
+  }
+
+  document.status = status;
+  document.remarks = remarks || '';
+  document.verifiedBy = req.user._id;
+  document.verifiedAt = new Date();
+  await document.save();
+
+  // Rejected KYC may lower completion; recompute and notify employee.
+  await refreshCompletion(document.user);
+
+  await writeAuditLog({
+    actor: req.user._id,
+    action: `employee.document.${status}`,
+    entityType: 'EmployeeDocument',
+    entityId: document._id,
+    metadata: { userId: req.params.id, category: document.category, remarks: remarks || '' }
+  });
+
+  await createNotification({
+    recipient: document.user,
+    type: 'document.verification',
+    title: status === 'verified' ? 'Document verified' : 'Document rejected',
+    message:
+      status === 'verified'
+        ? `Your ${document.subType || document.category} document has been verified.`
+        : `Your ${document.subType || document.category} document was rejected. ${remarks ? 'Reason: ' + remarks : ''}`,
+    link: '/profile',
+    relatedEntityType: 'EmployeeDocument',
+    relatedEntityId: document._id
+  });
+
+  const saved = await EmployeeDocument.findById(document._id)
+    .populate('uploadedBy', 'name email')
+    .populate('verifiedBy', 'name');
+  res.json({ message: `Document ${status}`, document: mapDocument(saved) });
 });
 
 export const deleteEmployeeDocument = asyncHandler(async (req, res) => {
@@ -517,9 +685,9 @@ export const deleteEmployeeDocument = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Document not found' });
   }
 
-  const absolutePath = path.resolve(__dirname, '../../uploads', document.relativePath);
-  await fs.rm(absolutePath, { force: true });
+  await removeDocument({ relativePath: document.relativePath, storageProvider: document.storageProvider });
   await document.deleteOne();
+  await refreshCompletion(req.params.id);
 
   await writeAuditLog({
     actor: req.user._id,
@@ -530,6 +698,20 @@ export const deleteEmployeeDocument = asyncHandler(async (req, res) => {
   });
 
   res.json({ message: 'Document deleted successfully' });
+});
+
+export const getEmployeeCompletion = asyncHandler(async (req, res) => {
+  if (!DIRECTORY_ROLES.includes(req.user.role) && !isOwner(req)) {
+    return res.status(403).json({ message: 'You can only view your own completion' });
+  }
+
+  const employee = await User.findById(req.params.id);
+  if (!employee) {
+    return res.status(404).json({ message: 'Employee not found' });
+  }
+
+  const result = await computeCompletion(employee);
+  res.json({ completion: result });
 });
 
 export const changeEmployeeEmail = asyncHandler(async (req, res) => {

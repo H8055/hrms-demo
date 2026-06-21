@@ -50,9 +50,47 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
+    photoUrl: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    dateOfBirth: {
+      type: Date,
+      default: null
+    },
+    gender: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    bloodGroup: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    maritalStatus: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    location: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     joiningDate: {
       type: Date,
       default: null
+    },
+    confirmationDate: {
+      type: Date,
+      default: null
+    },
+    probationStatus: {
+      type: String,
+      trim: true,
+      default: 'on_probation'
     },
     manager: {
       type: mongoose.Schema.Types.ObjectId,
@@ -73,6 +111,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: ''
+    },
+    profileCompletion: {
+      percent: { type: Number, default: 0 },
+      registryVersion: { type: Number, default: 0 },
+      missingFields: { type: [String], default: [] },
+      computedAt: { type: Date, default: null }
     },
     leaveBalances: {
       type: mongoose.Schema.Types.Mixed,

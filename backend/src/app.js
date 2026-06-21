@@ -57,6 +57,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
+// Employee documents are confidential — block direct static access so they can
+// only be retrieved through the authenticated download route (which enforces
+// category-level ACL and writes an access audit log). Other uploads (e.g. the
+// company logo) remain publicly served.
+app.use('/uploads/employee-documents', (req, res) => {
+  res.status(403).json({ message: 'Access to employee documents requires authentication' });
+});
 app.use('/uploads', express.static(uploadsDir));
 
 app.get('/', (req, res) => {

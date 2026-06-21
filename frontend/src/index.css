@@ -1242,3 +1242,130 @@ button:disabled {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+
+/* ===== Employee Profile module ===== */
+.completion-ring-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.completion-ring-label {
+  font-size: 0.62rem;
+  fill: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.profile-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.profile-identity h2 {
+  margin: 0 0 0.2rem;
+}
+
+.profile-photo {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+.profile-photo.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), #6da6ff);
+}
+
+.profile-completion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.completion-missing strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.completion-missing ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.profile-completion-inline {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mini-history-item.column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.status-badge.status-pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+}
+
+.status-badge.status-verified,
+.status-badge.status-approved {
+  background: rgba(22, 163, 74, 0.18);
+  color: #34d399;
+}
+
+.status-badge.status-rejected {
+  background: rgba(239, 91, 113, 0.18);
+  color: #f87171;
+}
+
+.text-danger {
+  color: #f87171;
+}
+
+.action-row.compact-wrap {
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+button.small,
+a.small {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+}

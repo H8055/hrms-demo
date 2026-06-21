@@ -6,23 +6,42 @@ import {
   createEmployee,
   deactivateEmployee,
   deleteEmployeeDocument,
+  downloadEmployeeDocument,
   exportEmployeesCsv,
   getEmployeeById,
+  getEmployeeCompletion,
   getMyEmployeeProfile,
   getOrgChart,
   importEmployeesCsv,
   listEmployeeDocuments,
   listEmployees,
   updateEmployee,
-  uploadEmployeeDocument
+  uploadEmployeeDocument,
+  verifyEmployeeDocument
 } from '../controllers/employee.controller.js';
 import { authenticate, authorize, checkPermission } from '../middleware/auth.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// Rewrites :id to the authenticated user so self-service routes reuse the
+// id-based document/completion handlers while staying scoped to the owner.
+function asSelf(req, _res, next) {
+  req.params.id = req.user._id.toString();
+  next();
+}
+
 router.use(authenticate);
+
 router.get('/me', getMyEmployeeProfile); // own profile — no module permission needed, just auth
+
+// Self-service (own profile only) — controller enforces ownership.
+router.get('/me/completion', asSelf, getEmployeeCompletion);
+router.get('/me/documents', asSelf, listEmployeeDocuments);
+router.post('/me/documents', asSelf, upload.single('file'), uploadEmployeeDocument);
+router.get('/me/documents/:documentId/download', asSelf, downloadEmployeeDocument);
+router.delete('/me/documents/:documentId', asSelf, deleteEmployeeDocument);
+
 router.get('/org-chart', checkPermission('employee', 'view'), getOrgChart);
 router.get('/export/csv', checkPermission('employee', 'export'), exportEmployeesCsv);
 router.post('/import-csv', checkPermission('employee', 'create'), [body('csvText').isString().withMessage('csvText is required')], importEmployeesCsv);
@@ -33,9 +52,16 @@ router.get(
   listEmployees
 );
 router.get('/:id', checkPermission('employee', 'view'), getEmployeeById);
-router.get('/:id/documents', checkPermission('employee', 'view'), listEmployeeDocuments);
+router.get('/:id/completion', checkPermission('employee', 'view'), getEmployeeCompletion);
+
+// Document routes use auth-only and defer to in-controller category ACL so roles
+// like "accounts" (salary docs only) work without the employee module permission.
+router.get('/:id/documents', listEmployeeDocuments);
+router.get('/:id/documents/:documentId/download', downloadEmployeeDocument);
 router.post('/:id/documents', checkPermission('employee', 'edit'), upload.single('file'), uploadEmployeeDocument);
+router.put('/:id/documents/:documentId/verify', checkPermission('employee', 'edit'), verifyEmployeeDocument);
 router.delete('/:id/documents/:documentId', checkPermission('employee', 'delete'), deleteEmployeeDocument);
+
 router.post(
   '/',
   checkPermission('employee', 'create'),

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MS HRMS — Employee Profile Module | Feature Overview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f4f6fa;
+    color: #1a2236;
+    line-height: 1.65;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #0f1e3c 0%, #1a3a6e 100%);
+    color: #fff;
+    padding: 48px 52px 40px;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+  }
+  .brand { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; color: #fff; }
+  .brand span { color: #5b9dff; }
+  .date-badge {
+    background: rgba(255,255,255,0.12);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #c5d5f0;
+  }
+  .header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    line-height: 1.25;
+  }
+  .header p {
+    font-size: 15px;
+    color: #b0c4e8;
+    max-width: 560px;
+  }
+  .tag-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .tag {
+    background: rgba(91,157,255,0.18);
+    color: #89beff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Body ── */
+  .body { padding: 44px 52px; }
+
+  .intro-box {
+    background: #f0f5ff;
+    border-left: 4px solid #3b72d9;
+    border-radius: 0 8px 8px 0;
+    padding: 18px 22px;
+    margin-bottom: 40px;
+    font-size: 15px;
+    color: #2a3f6e;
+  }
+
+  h2 {
+    font-size: 19px;
+    font-weight: 700;
+    color: #0f1e3c;
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8edf5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .icon { font-size: 20px; }
+
+  .section { margin-bottom: 40px; }
+
+  /* Feature cards */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .feature-card {
+    border: 1.5px solid #e4ebf5;
+    border-radius: 10px;
+    padding: 18px 20px;
+    background: #fafcff;
+  }
+  .feature-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a3a6e;
+    margin-bottom: 6px;
+  }
+  .feature-card p {
+    font-size: 13.5px;
+    color: #4a5570;
+    line-height: 1.55;
+  }
+
+  /* Benefit rows */
+  .benefit-list { list-style: none; }
+  .benefit-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f3f8;
+    font-size: 14px;
+    color: #2e3d58;
+  }
+  .benefit-list li:last-child { border-bottom: none; }
+  .benefit-list .check {
+    width: 22px;
+    height: 22px;
+    background: #e6f0ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: #3b72d9;
+    font-weight: 700;
+  }
+
+  /* Role table */
+  .role-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .role-table th {
+    background: #1a3a6e;
+    color: #fff;
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .role-table th:first-child { border-radius: 8px 0 0 0; }
+  .role-table th:last-child { border-radius: 0 8px 0 0; }
+  .role-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #edf0f7;
+    color: #2e3d58;
+    vertical-align: top;
+  }
+  .role-table tr:nth-child(even) td { background: #f8faff; }
+  .role-table td:first-child { font-weight: 600; color: #1a3a6e; }
+
+  /* Letter list */
+  .letter-pills { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+  .pill {
+    background: #e8f0ff;
+    color: #1e4db7;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* Progress ring visual */
+  .ring-demo {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    background: #0f1e3c;
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-top: 4px;
+  }
+  .ring-visual {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(#4f8cff 0% 72%, #1e3060 72% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .ring-inner {
+    width: 58px;
+    height: 58px;
+    background: #0f1e3c;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .ring-text h4 { color: #fff; font-size: 15px; margin-bottom: 6px; }
+  .ring-text p { color: #8faad4; font-size: 13px; line-height: 1.5; }
+
+  /* Security highlight */
+  .security-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .sec-card {
+    background: #f5f8ff;
+    border: 1px solid #d8e4f8;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  .sec-card .sec-icon { font-size: 26px; margin-bottom: 8px; }
+  .sec-card h4 { font-size: 13px; font-weight: 700; color: #1a3a6e; margin-bottom: 4px; }
+  .sec-card p { font-size: 12px; color: #5a6a8a; line-height: 1.45; }
+
+  /* Footer */
+  .footer {
+    background: #f4f6fa;
+    border-top: 1px solid #e4ebf5;
+    padding: 24px 52px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    color: #7a8aaa;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; margin: 0; border-radius: 0; }
+  }
+
+  @media (max-width: 640px) {
+    .body { padding: 28px 22px; }
+    .header { padding: 32px 22px 28px; }
+    .feature-grid, .security-grid { grid-template-columns: 1fr; }
+    .header-top { flex-direction: column; gap: 10px; }
+    .footer { flex-direction: column; gap: 8px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="brand">MS <span>HRMS</span></div>
+      <div class="date-badge">June 2026 Release</div>
+    </div>
+    <h1>Employee Profile Module</h1>
+    <p>A complete self-service employee portal with secure document management, automated HR letters, and real-time profile tracking.</p>
+    <div class="tag-row">
+      <span class="tag">New Feature</span>
+      <span class="tag">HR Management</span>
+      <span class="tag">Document Vault</span>
+      <span class="tag">Self-Service</span>
+      <span class="tag">Auto Letters</span>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Intro -->
+    <div class="intro-box">
+      This update introduces a fully integrated Employee Profile system into MS HRMS. Every employee now has a dedicated profile page, a personal document vault, and the ability to request profile updates — all managed through a structured HR approval workflow.
+    </div>
+
+    <!-- 1. What's New -->
+    <div class="section">
+      <h2><span class="icon">✦</span> What's New</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Employee Profile Dashboard</h3>
+          <p>Each employee has a dedicated profile page showing their personal details, employment information, reporting manager, and current documents — all in one place.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Profile Completion Tracker</h3>
+          <p>A visual progress ring shows how complete an employee's profile is. HR can instantly see who has missing documents or incomplete information across the organisation.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Secure Document Vault</h3>
+          <p>Employees can upload KYC documents, identity proofs, banking details, and qualifications directly from their profile. All files are stored securely in the cloud — never accessible via a public link.</p>
+        </div>
+        <div class="feature-card">
+          <h3>HR Verification Workflow</h3>
+          <p>HR reviews each uploaded document and marks it as Verified or Rejected with a reason. Employees are notified immediately and can re-upload if required.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Self-Service Profile Updates</h3>
+          <p>Employees can request changes to their phone number, address, bank details, or emergency contact. HR reviews and approves the change before it is applied — no direct editing.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Automated HR Letters</h3>
+          <p>HR can generate official letters in one click — offer letters, appointment letters, salary increment letters, experience certificates, and more — directly from within the employee profile.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Who Benefits -->
+    <div class="section">
+      <h2><span class="icon">👥</span> Who Uses It &amp; What They Can Do</h2>
+      <table class="role-table">
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Capabilities</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Employee</td>
+            <td>View their own profile, upload KYC &amp; personal documents, download their letters, request profile corrections, track document verification status.</td>
+          </tr>
+          <tr>
+            <td>HR</td>
+            <td>View all employee profiles, verify or reject documents with remarks, generate and issue official letters, approve or reject profile change requests, monitor profile completion across the team.</td>
+          </tr>
+          <tr>
+            <td>Manager</td>
+            <td>View team members' profiles and employment documents. Cannot access salary or KYC documents of other employees.</td>
+          </tr>
+          <tr>
+            <td>Accounts</td>
+            <td>Access salary-related documents only (payslips, salary structures, bank proofs) — no access to other document categories.</td>
+          </tr>
+          <tr>
+            <td>Admin</td>
+            <td>Full access to all profiles, documents, letters, and change requests. Can manage letter templates for the organisation.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. Profile Completion -->
+    <div class="section">
+      <h2><span class="icon">◎</span> Profile Completion Tracker</h2>
+      <div class="ring-demo">
+        <div class="ring-visual">
+          <div class="ring-inner">72%</div>
+        </div>
+        <div class="ring-text">
+          <h4>Live completion percentage for every employee</h4>
+          <p>The ring updates in real time as employees fill in details and upload documents. When HR adds a new required field in the future, all profiles automatically recalculate and employees are notified to complete the new information.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Letters -->
+    <div class="section">
+      <h2><span class="icon">✉</span> Automated HR Letters</h2>
+      <p style="font-size:14px; color:#4a5570; margin-bottom:14px;">HR can generate any of the following letters in one click. The system auto-fills the employee's name, designation, salary, joining date, and other details from their profile. A unique reference number is assigned to every letter automatically.</p>
+      <div class="letter-pills">
+        <span class="pill">Offer Letter</span>
+        <span class="pill">Appointment Letter</span>
+        <span class="pill">Confirmation Letter</span>
+        <span class="pill">Promotion Letter</span>
+        <span class="pill">Salary Increment Letter</span>
+        <span class="pill">Warning Letter</span>
+        <span class="pill">Experience Certificate</span>
+        <span class="pill">Relieving Letter</span>
+      </div>
+      <p style="font-size:13px; color:#7a8aaa; margin-top:14px;">Generated letters are saved automatically in the employee's document vault and are available for the employee to download from their profile.</p>
+    </div>
+
+    <!-- 5. Document Categories -->
+    <div class="section">
+      <h2><span class="icon">🗂</span> Document Categories Supported</h2>
+      <ul class="benefit-list">
+        <li>
+          <span class="check">✓</span>
+          <span><strong>KYC Documents</strong> — Aadhaar card, PAN card, passport, driving licence, voter ID</span>
+        </li>
+        <li>
+          <span class="check">✓</span>
+          <span><strong>Banking Documents</strong> — Bank account proof, cancelled cheque, passbook</span>
+        </li>
+        <li>
+          <span class="check">✓</span>
+          <span><strong>Education &amp; Employment</strong> — Degree certificates, previous offer letters, experience letters, relieving letters</span>
+        </li>
+        <li>
+          <span class="check">✓</span>
+          <span><strong>Salary Documents</strong> — Payslips, salary structures, increment letters (restricted to HR and Accounts)</span>
+        </li>
+        <li>
+          <span class="check">✓</span>
+          <span><strong>HR-Generated Letters</strong> — Stored automatically when HR issues any official letter</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 6. Security -->
+    <div class="section">
+      <h2><span class="icon">🔒</span> Security &amp; Privacy</h2>
+      <div class="security-grid">
+        <div class="sec-card">
+          <div class="sec-icon">☁</div>
+          <h4>Cloud Storage</h4>
+          <p>All documents are stored securely in Supabase cloud storage. No file is ever served from a public URL.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">🔗</div>
+          <h4>Expiring Access Links</h4>
+          <p>Download links are temporary and expire after 5 minutes. Each access is logged with a timestamp.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">🛡</div>
+          <h4>Role-Based Access</h4>
+          <p>Accounts can only see salary documents. Managers cannot see KYC. Employees see only their own files.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">📋</div>
+          <h4>Full Audit Trail</h4>
+          <p>Every document view, upload, verification, and letter generation is recorded with the user, date, and action.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">✏</div>
+          <h4>Approval Workflow</h4>
+          <p>Employees cannot directly edit their own records. All changes go through HR review before being applied.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">🔔</div>
+          <h4>Expiry Notifications</h4>
+          <p>The system automatically reminds HR and the employee 30 days before any document (e.g. passport) expires.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Summary -->
+    <div class="section">
+      <h2><span class="icon">★</span> Business Benefits at a Glance</h2>
+      <ul class="benefit-list">
+        <li><span class="check">✓</span><span>Eliminate paper-based KYC collection — everything is digital, verified, and searchable.</span></li>
+        <li><span class="check">✓</span><span>HR letter generation that previously took 20–30 minutes now takes one click.</span></li>
+        <li><span class="check">✓</span><span>Employees can update their own information without calling HR — reducing back-and-forth.</span></li>
+        <li><span class="check">✓</span><span>No more expired document surprises — automatic 30-day advance alerts keep you ahead.</span></li>
+        <li><span class="check">✓</span><span>Complete visibility into which employees have incomplete profiles or pending documents.</span></li>
+        <li><span class="check">✓</span><span>Role-based access ensures sensitive salary and KYC data is only visible to the right people.</span></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>MS HRMS &mdash; Employee Profile Module &mdash; June 2026</span>
+    <span>Confidential &mdash; For client review only</span>
+  </div>
+
+</div>
+</body>
+</html>

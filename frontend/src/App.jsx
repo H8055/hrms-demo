@@ -9,6 +9,8 @@ import AdvanceRequestPage from './pages/AdvanceRequestPage';
 import AdvanceAdminPage from './pages/AdvanceAdminPage';
 import MyAdvancesPage from './pages/MyAdvancesPage';
 import EmployeesPage from './pages/EmployeesPage';
+import ProfilePage from './pages/ProfilePage';
+import ChangeRequestsPage from './pages/ChangeRequestsPage';
 import AttendancePage from './pages/AttendancePage';
 import LeavePage from './pages/LeavePage';
 import PayrollPage from './pages/PayrollPage';
@@ -35,6 +37,22 @@ export default function App() {
         element={
           <ProtectedRoute permission={{ module: 'dashboard', action: 'view' }}>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile/change-requests"
+        element={
+          <ProtectedRoute anyPermissions={[{ module: 'employee', action: 'view' }]}>
+            <ChangeRequestsPage />
           </ProtectedRoute>
         }
       />
